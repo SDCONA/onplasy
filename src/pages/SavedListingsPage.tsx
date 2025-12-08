@@ -63,11 +63,27 @@ export default function SavedListingsPage({ user }: SavedListingsPageProps) {
       );
       const data = await response.json();
       if (data.savedListings) {
-        setSavedListings((prevListings) => [...prevListings, ...data.savedListings]);
-        setHasMore(data.hasMore || false);
+        if (offset === 0) {
+          // Reset listings when fetching from beginning
+          setSavedListings(data.savedListings);
+        } else {
+          // Append when loading more
+          setSavedListings((prevListings) => [...prevListings, ...data.savedListings]);
+        }
+        // Set hasMore based on whether we received a full page
+        setHasMore(data.savedListings.length === 30);
+      } else {
+        if (offset === 0) {
+          setSavedListings([]);
+        }
+        setHasMore(false);
       }
     } catch (error) {
       console.error('Failed to fetch saved listings:', error);
+      if (offset === 0) {
+        setSavedListings([]);
+      }
+      setHasMore(false);
     } finally {
       setLoading(false);
       setLoadingMore(false);

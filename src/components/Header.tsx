@@ -18,15 +18,8 @@ export default function Header({ user, unreadCount = 0 }: HeaderProps) {
   const isAdmin = user?.is_admin === true;
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      // Use navigate instead of window.location to avoid full page reload
-      navigate('/', { replace: true });
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Fallback to full page reload if navigate fails
-      window.location.href = '/';
-    }
+    await supabase.auth.signOut();
+    window.location.href = '/';
   };
 
   // Close mobile menu when route changes
@@ -88,7 +81,12 @@ export default function Header({ user, unreadCount = 0 }: HeaderProps) {
                   <span>Logout</span>
                 </button>
               </>
-            ) : null}
+            ) : (
+              <Link to="/auth" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                <User className="w-5 h-5" />
+                <span>Sign In</span>
+              </Link>
+            )}
           </nav>
 
           {/* Mobile Menu Button */}
@@ -173,15 +171,21 @@ export default function Header({ user, unreadCount = 0 }: HeaderProps) {
               </>
             ) : (
               <>
-                <p className="text-gray-500 mb-2 px-2">Legals</p>
-                <Link to="/terms" className="flex items-center gap-2 text-gray-700 hover:text-blue-600 px-2 py-2">
-                  <FileText className="w-5 h-5" />
-                  <span>Terms of Service</span>
+                <Link to="/auth" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors mx-2">
+                  <User className="w-5 h-5" />
+                  <span>Sign In</span>
                 </Link>
-                <Link to="/privacy" className="flex items-center gap-2 text-gray-700 hover:text-blue-600 px-2 py-2">
-                  <Shield className="w-5 h-5" />
-                  <span>Privacy Policy</span>
-                </Link>
+                <div className="border-t border-gray-200 pt-3 mt-3">
+                  <p className="text-gray-500 mb-2 px-2">Legals</p>
+                  <Link to="/terms" className="flex items-center gap-2 text-gray-700 hover:text-blue-600 px-2 py-2">
+                    <FileText className="w-5 h-5" />
+                    <span>Terms of Service</span>
+                  </Link>
+                  <Link to="/privacy" className="flex items-center gap-2 text-gray-700 hover:text-blue-600 px-2 py-2">
+                    <Shield className="w-5 h-5" />
+                    <span>Privacy Policy</span>
+                  </Link>
+                </div>
               </>
             )}
           </nav>

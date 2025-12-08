@@ -156,9 +156,14 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
         setHasMoreActive(true);
         setHasMoreArchived(true);
         setRefreshTrigger(prev => prev + 1);
+      } else {
+        const errorText = await response.text();
+        console.error('Renew failed:', response.status, errorText);
+        alert('Failed to renew listing. Please try again.');
       }
     } catch (error) {
       console.error('Failed to renew listing:', error);
+      alert('Failed to renew listing. Please try again.');
     }
   };
 
@@ -436,7 +441,8 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
         {/* Archive Modal */}
         {showArchiveModal && (
           <div className="fixed inset-0 flex items-center justify-center z-50">
-            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4">
+            <div className="absolute inset-0 bg-black bg-opacity-50" onClick={cancelArchive}></div>
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4 relative z-10">
               <h2 className="mb-4">Archive Listing</h2>
               <p className="text-gray-600 mb-6">Are you sure you want to archive this listing? You can renew it later.</p>
               <div className="flex justify-end gap-3">
@@ -460,7 +466,8 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
         {/* Delete Modal */}
         {showDeleteModal && (
           <div className="fixed inset-0 flex items-center justify-center z-50">
-            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4">
+            <div className="absolute inset-0 bg-black bg-opacity-50" onClick={cancelDelete}></div>
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4 relative z-10">
               <h2 className="mb-4 text-red-600">Delete Listing Permanently</h2>
               <p className="text-gray-600 mb-6">Are you sure you want to permanently delete this listing? This action cannot be undone.</p>
               <div className="flex justify-end gap-3">

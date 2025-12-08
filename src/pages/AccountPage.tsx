@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, User, Lock, MapPin, Mail, Check } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
@@ -17,6 +17,7 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('profile');
+  const hasFetchedProfile = useRef(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -52,8 +53,12 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       navigate('/auth');
       return;
     }
-    fetchProfile();
-  }, [user]);
+    // Only fetch profile once on mount
+    if (!hasFetchedProfile.current) {
+      hasFetchedProfile.current = true;
+      fetchProfile();
+    }
+  }, []); // Empty dependency array - only run on mount
 
   const fetchProfile = async () => {
     try {
