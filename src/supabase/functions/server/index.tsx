@@ -1820,17 +1820,17 @@ app.post('/make-server-5dec7914/upload-image', async (c) => {
       return c.json({ error: 'Failed to upload image' }, 500);
     }
 
-    // Get signed URL (valid for 10 years)
-    const { data: urlData } = await supabase.storage
+    // Get public URL (bucket is public, so no signed URL needed)
+    const { data: publicUrlData } = supabase.storage
       .from(BUCKET_NAME)
-      .createSignedUrl(fileName, 315360000); // 10 years in seconds
+      .getPublicUrl(fileName);
 
-    if (!urlData?.signedUrl) {
+    if (!publicUrlData?.publicUrl) {
       return c.json({ error: 'Failed to get image URL' }, 500);
     }
 
     console.log(`Image uploaded successfully: ${fileName}`);
-    return c.json({ url: urlData.signedUrl });
+    return c.json({ url: publicUrlData.publicUrl });
   } catch (error) {
     console.log('Upload image exception:', error);
     return c.json({ error: 'Failed to upload image' }, 500);
