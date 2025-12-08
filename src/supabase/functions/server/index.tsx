@@ -3,6 +3,7 @@ import { cors } from 'npm:hono/cors';
 import { logger } from 'npm:hono/logger';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyRecaptcha } from './recaptcha.ts';
+import { getOptimizedListings, geocodeAndSave } from './listings_optimized.tsx';
 
 const app = new Hono();
 
@@ -223,7 +224,7 @@ app.post('/make-server-5dec7914/auth/signup', async (c) => {
   }
 });
 
-// Listings routes
+// Listings routes (OPTIMIZED with database-level pagination)
 app.get('/make-server-5dec7914/listings', async (c) => {
   try {
     const category = c.req.query('category');
@@ -239,163 +240,23 @@ app.get('/make-server-5dec7914/listings', async (c) => {
     const limit = parseInt(c.req.query('limit') || '30'); // Pagination limit
     const offset = parseInt(c.req.query('offset') || '0'); // Pagination offset
     
-    let query = supabase
-      .from('listings')
-      .select(`
-        *,
-        profiles!listings_user_id_fkey(id, name, avatar_url, rating_count, rating_average, created_at),
-        categories(id, name, slug),
-        subcategories(id, name, slug)
-      `);
+    // Use optimized listing fetcher
+    const result = await getOptimizedListings({
+      category,
+      subcategory,
+      search,
+      status,
+      userId,
+      sort,
+      type,
+      location,
+      zipcode,
+      distance,
+      limit,
+      offset
+    });
     
-    if (status) {
-      query = query.eq('status', status);
-    }
-    
-    if (category && category !== 'all') {
-      const { data: categoryData } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('slug', category)
-        .single();
-      
-      if (categoryData) {
-        query = query.eq('category_id', categoryData.id);
-      }
-    }
-    
-    if (subcategory && subcategory !== 'all') {
-      const { data: subcategoryData } = await supabase
-        .from('subcategories')
-        .select('id')
-        .eq('slug', subcategory)
-        .single();
-      
-      if (subcategoryData) {
-        query = query.eq('subcategory_id', subcategoryData.id);
-      }
-    }
-    
-    if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
-    }
-    
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
-    
-    // Filter by listing type (buy/rent) for real estate
-    if (type && type !== 'all') {
-      query = query.eq('listing_type', type);
-    }
-    
-    // Filter by location for services
-    if (location) {
-      query = query.or(`title.ilike.%${location}%,description.ilike.%${location}%`);
-    }
-    
-    // Fetch the listings first
-    const { data, error } = await query;
-    
-    if (error) {
-      console.log('Fetch listings error:', error);
-      return c.json({ error: error.message }, 400);
-    }
-    
-    let filteredData = data ? [...data] : [];
-    
-    // Filter by zipcode and distance if provided
-    if (zipcode && zipcode.length === 5) {
-      console.log(`[ZIP FILTER] Starting filter for zipcode: ${zipcode}, distance: ${distance} miles`);
-      const searchCoords = await getZipcodeCoords(zipcode);
-      
-      if (searchCoords) {
-        console.log(`[ZIP FILTER] Search coordinates for ${zipcode}: lat=${searchCoords.lat}, lon=${searchCoords.lon}`);
-        
-        // Calculate distances and filter
-        const listingsWithDistance = await Promise.all(
-          filteredData.map(async (listing) => {
-            // Get zipcode from listing itself
-            const listingZipcode = listing.zip_code;
-            
-            if (!listingZipcode) {
-              console.log(`[ZIP FILTER] Listing ${listing.id} has no zipcode, excluding`);
-              return null; // Exclude listings without zipcode
-            }
-            
-            const listingCoords = await getZipcodeCoords(listingZipcode);
-            
-            if (!listingCoords) {
-              console.log(`[ZIP FILTER] Could not get coordinates for listing ${listing.id} zipcode ${listingZipcode}, excluding`);
-              return null;
-            }
-            
-            const dist = calculateDistance(
-              searchCoords.lat,
-              searchCoords.lon,
-              listingCoords.lat,
-              listingCoords.lon
-            );
-            
-            console.log(`[ZIP FILTER] Listing ${listing.id} (${listing.title}) at zipcode ${listingZipcode} (lat=${listingCoords.lat}, lon=${listingCoords.lon}) is ${dist.toFixed(2)} miles away`);
-            
-            return { ...listing, distance: dist };
-          })
-        );
-        
-        // Filter out nulls and listings beyond distance
-        filteredData = listingsWithDistance
-          .filter(item => {
-            if (item === null) return false;
-            const isWithinDistance = item.distance <= distance;
-            console.log(`[ZIP FILTER] Listing ${item.id}: ${item.distance.toFixed(2)} miles - ${isWithinDistance ? 'INCLUDED' : 'EXCLUDED (too far)'}`);
-            return isWithinDistance;
-          })
-          .map(item => item!);
-        
-        console.log(`[ZIP FILTER] Final result: ${filteredData.length} listings within ${distance} miles of ${zipcode}`);
-      }
-    }
-    
-    // Apply sorting
-    if (sort === 'random') {
-      // Shuffle array using Fisher-Yates algorithm
-      for (let i = filteredData.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [filteredData[i], filteredData[j]] = [filteredData[j], filteredData[i]];
-      }
-      
-      // Apply pagination
-      const paginatedData = filteredData.slice(offset, offset + limit);
-      const hasMore = offset + limit < filteredData.length;
-      
-      return c.json({ listings: paginatedData, total: filteredData.length, hasMore });
-    } else {
-      // Apply in-memory sorting
-      const sorted = [...filteredData];
-      switch (sort) {
-        case 'newest':
-          sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-          break;
-        case 'oldest':
-          sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-          break;
-        case 'price_low':
-          sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
-          break;
-        case 'price_high':
-          sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
-          break;
-        default:
-          sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      }
-      
-      // Apply pagination
-      const paginatedData = sorted.slice(offset, offset + limit);
-      const hasMore = offset + limit < sorted.length;
-      
-      return c.json({ listings: paginatedData, total: sorted.length, hasMore });
-    }
+    return c.json(result);
   } catch (error) {
     console.log('Fetch listings exception:', error);
     return c.json({ error: 'Failed to fetch listings' }, 500);
@@ -505,6 +366,13 @@ app.post('/make-server-5dec7914/listings', async (c) => {
       }
     }
     
+    // OPTIMIZATION: Geocode and save lat/lon for zipcode searches
+    if (zip_code) {
+      geocodeAndSave(data.id, zip_code).catch(err => 
+        console.log('Geocoding error (non-fatal):', err)
+      );
+    }
+    
     return c.json({ listing: data });
   } catch (error) {
     console.log('Create listing exception:', error);
@@ -590,6 +458,13 @@ app.put('/make-server-5dec7914/listings/:id', async (c) => {
             ...reData
           });
       }
+    }
+    
+    // OPTIMIZATION: Geocode and save lat/lon if zipcode changed
+    if (zip_code) {
+      geocodeAndSave(id, zip_code).catch(err => 
+        console.log('Geocoding error (non-fatal):', err)
+      );
     }
     
     return c.json({ listing: data });

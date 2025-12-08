@@ -1,7 +1,7 @@
 
-  # Marketplace Website Development
+  # Buy and Sell OnPlasy
 
-  This is a code bundle for Marketplace Website Development. The original project is available at https://www.figma.com/design/EnKwoW0ZTFgtAI4xuwqv16/Marketplace-Website-Development.
+  This is a code bundle for Buy and Sell OnPlasy. The original project is available at https://www.figma.com/design/EnKwoW0ZTFgtAI4xuwqv16/Buy-and-Sell-OnPlasy.
 
   ## Running the code
 

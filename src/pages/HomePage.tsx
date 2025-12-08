@@ -103,7 +103,7 @@ export default function HomePage({ user }: HomePageProps) {
           const newListings = data.listings.filter((listing: any) => !existingIds.has(listing.id));
           return [...prevListings, ...newListings];
         });
-        setHasMore(data.listings.length > 0);
+        setHasMore(data.hasMore ?? false); // Use backend's hasMore value
       }
     } catch (error) {
       console.error('Failed to fetch listings:', error);
@@ -130,10 +130,10 @@ export default function HomePage({ user }: HomePageProps) {
 
   useEffect(() => {
     const currentRef = loadMoreRef.current;
-    if (currentRef) {
+    if (currentRef && !loadingMore) {
       const currentObserver = new IntersectionObserver(
         (entries) => {
-          if (entries[0].isIntersecting && hasMore) {
+          if (entries[0].isIntersecting && hasMore && !loadingMore) {
             setLoadingMore(true);
             setOffset((prevOffset) => prevOffset + 20);
           }
@@ -148,7 +148,7 @@ export default function HomePage({ user }: HomePageProps) {
         observerRef.current.disconnect();
       }
     };
-  }, [hasMore]);
+  }, [hasMore, loadingMore]);
 
   return (
     <div className="min-h-screen bg-gray-50">
