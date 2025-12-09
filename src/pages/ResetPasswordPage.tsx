@@ -13,25 +13,68 @@ export default function ResetPasswordPage() {
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState<'success' | 'error'>('success');
   const [sessionReady, setSessionReady] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
   // Exchange the recovery token for a session on mount
   useEffect(() => {
     const checkSession = async () => {
-      // First, let Supabase's detectSessionInUrl handle the hash automatically
-      // by just waiting a moment for it to process
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Now check if we have a session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (session) {
-        console.log('Recovery session established successfully');
-        setSessionReady(true);
-      } else {
-        console.error('No session found:', sessionError);
+      try {
+        // Log the full URL for debugging
+        console.log('Current URL:', window.location.href);
+        console.log('Hash:', window.location.hash);
+        
+        // Check for recovery token in URL hash
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
+
+        console.log('URL params:', { type, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
+
+        if (type === 'recovery' && accessToken && refreshToken) {
+          console.log('Recovery tokens found in URL, setting session...');
+          
+          // Manually set the session using the tokens from the URL
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+
+          if (error) {
+            console.error('Failed to set session:', error);
+            setModalType('error');
+            setModalMessage('Invalid or expired reset link. Please request a new password reset from the login page.');
+            setShowModal(true);
+            setCheckingSession(false);
+            return;
+          }
+
+          if (data.session) {
+            console.log('Recovery session established successfully');
+            setSessionReady(true);
+            setCheckingSession(false);
+            // Clean up the URL hash
+            window.history.replaceState(null, '', window.location.pathname);
+          } else {
+            console.error('No session created');
+            setModalType('error');
+            setModalMessage('Failed to establish session. Please request a new password reset.');
+            setShowModal(true);
+            setCheckingSession(false);
+          }
+        } else {
+          console.error('No recovery tokens found in URL');
+          setModalType('error');
+          setModalMessage('Invalid or expired reset link. Please request a new password reset from the login page.');
+          setShowModal(true);
+          setCheckingSession(false);
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
         setModalType('error');
-        setModalMessage('Invalid or expired reset link. Please request a new password reset from the login page.');
+        setModalMessage('An error occurred. Please request a new password reset from the login page.');
         setShowModal(true);
+        setCheckingSession(false);
       }
     };
 
@@ -101,77 +144,86 @@ export default function ResetPasswordPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <h1 className="text-center mb-6">Reset Password</h1>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded mb-4">
-            {error}
+        {checkingSession ? (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-600">Verifying reset link...</p>
           </div>
-        )}
-
-        <form onSubmit={handleResetPassword}>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">
-              New Password <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter new password"
-            />
-          </div>
-
-          {showPasswordRequirements && (
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-700 mb-2">Password must contain:</p>
-              <div className="space-y-1">
-                <div className={`flex items-center text-sm ${passwordRequirements.minLength ? 'text-green-600' : 'text-red-500'}`}>
-                  <Check className="w-4 h-4 mr-2" />
-                  At least 8 characters
-                </div>
-                <div className={`flex items-center text-sm ${passwordRequirements.hasUppercase ? 'text-green-600' : 'text-red-500'}`}>
-                  <Check className="w-4 h-4 mr-2" />
-                  At least one uppercase letter
-                </div>
-                <div className={`flex items-center text-sm ${passwordRequirements.hasLowercase ? 'text-green-600' : 'text-red-500'}`}>
-                  <Check className="w-4 h-4 mr-2" />
-                  At least one lowercase letter
-                </div>
-                <div className={`flex items-center text-sm ${passwordRequirements.hasNumber ? 'text-green-600' : 'text-red-500'}`}>
-                  <Check className="w-4 h-4 mr-2" />
-                  At least one number
-                </div>
-                <div className={`flex items-center text-sm ${passwordRequirements.hasSpecial ? 'text-green-600' : 'text-red-500'}`}>
-                  <Check className="w-4 h-4 mr-2" />
-                  At least one special character
-                </div>
+        ) : !sessionReady ? null : (
+          <>
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded mb-4">
+                {error}
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="mb-6">
-            <label className="block text-gray-700 mb-2">
-              Confirm Password <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Confirm new password"
-            />
-          </div>
+            <form onSubmit={handleResetPassword}>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">
+                  New Password <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter new password"
+                />
+              </div>
 
-          <button
-            type="submit"
-            disabled={loading || !isPasswordStrong || newPassword !== confirmPassword}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Resetting...' : 'Reset Password'}
-          </button>
-        </form>
+              {showPasswordRequirements && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-700 mb-2">Password must contain:</p>
+                  <div className="space-y-1">
+                    <div className={`flex items-center text-sm ${passwordRequirements.minLength ? 'text-green-600' : 'text-red-500'}`}>
+                      <Check className="w-4 h-4 mr-2" />
+                      At least 8 characters
+                    </div>
+                    <div className={`flex items-center text-sm ${passwordRequirements.hasUppercase ? 'text-green-600' : 'text-red-500'}`}>
+                      <Check className="w-4 h-4 mr-2" />
+                      At least one uppercase letter
+                    </div>
+                    <div className={`flex items-center text-sm ${passwordRequirements.hasLowercase ? 'text-green-600' : 'text-red-500'}`}>
+                      <Check className="w-4 h-4 mr-2" />
+                      At least one lowercase letter
+                    </div>
+                    <div className={`flex items-center text-sm ${passwordRequirements.hasNumber ? 'text-green-600' : 'text-red-500'}`}>
+                      <Check className="w-4 h-4 mr-2" />
+                      At least one number
+                    </div>
+                    <div className={`flex items-center text-sm ${passwordRequirements.hasSpecial ? 'text-green-600' : 'text-red-500'}`}>
+                      <Check className="w-4 h-4 mr-2" />
+                      At least one special character
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-6">
+                <label className="block text-gray-700 mb-2">
+                  Confirm Password <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !isPasswordStrong || newPassword !== confirmPassword}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Resetting...' : 'Reset Password'}
+              </button>
+            </form>
+          </>
+        )}
       </div>
 
       {/* Modal */}
