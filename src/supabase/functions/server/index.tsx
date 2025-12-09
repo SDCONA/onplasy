@@ -7,6 +7,12 @@ import { getOptimizedListings, geocodeAndSave } from './listings_optimized.tsx';
 
 const app = new Hono();
 
+// Environment-based logging (only logs in development)
+const isDev = Deno.env.get('ENVIRONMENT') === 'development';
+const debugLog = (...args: any[]) => {
+  if (isDev) console.log(...args);
+};
+
 // Middleware
 app.use('*', cors({
   origin: '*',
@@ -14,7 +20,10 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// app.use('*', logger(console.log)); // Disabled to prevent JSON corruption
+// Enable request logging only in development
+if (isDev) {
+  app.use('*', logger(console.log));
+}
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -33,14 +42,14 @@ async function initStorage() {
         public: true,
         fileSizeLimit: 5242880 // 5MB per file
       });
-      console.log('Storage bucket created:', BUCKET_NAME);
+      debugLog('Storage bucket created:', BUCKET_NAME);
     } else {
       // Update existing bucket to ensure it's public
       await supabase.storage.updateBucket(BUCKET_NAME, {
         public: true,
         fileSizeLimit: 5242880
       });
-      console.log('Storage bucket updated to public:', BUCKET_NAME);
+      debugLog('Storage bucket updated to public:', BUCKET_NAME);
     }
   } catch (error) {
     console.error('Storage initialization error:', error);
@@ -65,17 +74,17 @@ app.get('/make-server-5dec7914/recaptcha-site-key', async (c) => {
 async function getAuthUser(request: Request) {
   const accessToken = request.headers.get('Authorization')?.split(' ')[1];
   if (!accessToken) {
-    console.log('No access token provided');
+    debugLog('No access token provided');
     return null;
   }
   
   const { data: { user }, error } = await supabase.auth.getUser(accessToken);
   if (error) {
-    console.log('Auth error:', error.message, 'Code:', error.status);
+    debugLog('Auth error:', error.message, 'Code:', error.status);
     return null;
   }
   if (!user) {
-    console.log('No user found for token');
+    debugLog('No user found for token');
     return null;
   }
   
@@ -111,7 +120,7 @@ async function getZipcodeCoords(zipcode: string): Promise<{ lat: number, lon: nu
     }
     return null;
   } catch (error) {
-    console.log('Zipcode API error:', error);
+    debugLog('Zipcode API error:', error);
     return null;
   }
 }
@@ -145,7 +154,7 @@ app.post('/make-server-5dec7914/auth/signup', async (c) => {
     });
     
     if (error) {
-      console.log('Signup error:', error);
+      console.error('Signup error:', error.message);
       return c.json({ error: error.message }, 400);
     }
     
@@ -166,7 +175,7 @@ app.post('/make-server-5dec7914/auth/signup', async (c) => {
     });
     
     if (verificationError) {
-      console.log('Verification link generation error:', verificationError);
+      console.error('Verification link generation error:', verificationError.message);
       return c.json({ error: 'Failed to generate verification link' }, 500);
     }
     
@@ -174,7 +183,7 @@ app.post('/make-server-5dec7914/auth/signup', async (c) => {
     try {
       const resendApiKey = Deno.env.get('RESEND_API_KEY');
       if (!resendApiKey) {
-        console.log('RESEND_API_KEY not configured');
+        console.error('CRITICAL: RESEND_API_KEY not configured');
         return c.json({ error: 'Email service not configured' }, 500);
       }
       
@@ -224,13 +233,13 @@ app.post('/make-server-5dec7914/auth/signup', async (c) => {
       const resendData = await resendResponse.json();
       
       if (!resendResponse.ok) {
-        console.log('Resend API error:', resendData);
+        console.error('Resend API error:', resendData.message || 'Unknown error');
         return c.json({ error: 'Failed to send verification email' }, 500);
       }
       
-      console.log('Verification email sent successfully:', resendData);
+      debugLog('Verification email sent successfully');
     } catch (emailError) {
-      console.log('Email sending exception:', emailError);
+      console.error('Email sending exception:', emailError);
       return c.json({ error: 'Failed to send verification email' }, 500);
     }
     
@@ -239,7 +248,7 @@ app.post('/make-server-5dec7914/auth/signup', async (c) => {
       message: 'Account created! Please check your email to verify your account.'
     });
   } catch (error) {
-    console.log('Signup exception:', error);
+    console.error('Signup exception:', error);
     return c.json({ error: 'Signup failed' }, 500);
   }
 });
@@ -272,7 +281,6 @@ app.post('/make-server-5dec7914/forgot-password', async (c) => {
     await kv.set(rateLimitKey, Date.now().toString(), 60); // Expires in 60 seconds
     
     // Generate password reset link (optimized - single query instead of loading all users)
-    // This will fail gracefully if user doesn't exist
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
@@ -281,17 +289,17 @@ app.post('/make-server-5dec7914/forgot-password', async (c) => {
       }
     });
     
-    // Always return same message for security (don't reveal if user exists or not)
+    // If user doesn't exist, return generic message (security - don't reveal if user exists)
     if (resetError) {
-      console.log('Reset link generation error (user may not exist):', resetError);
+      debugLog('Reset link generation failed (user may not exist):', resetError.message);
       return c.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
     }
     
-    // Send reset email via Resend
+    // User exists - send reset email via Resend
     try {
       const resendApiKey = Deno.env.get('RESEND_API_KEY');
       if (!resendApiKey) {
-        console.log('RESEND_API_KEY not configured');
+        console.error('CRITICAL: RESEND_API_KEY not configured');
         return c.json({ error: 'Email service not configured' }, 500);
       }
       
@@ -341,13 +349,13 @@ app.post('/make-server-5dec7914/forgot-password', async (c) => {
       const resendData = await resendResponse.json();
       
       if (!resendResponse.ok) {
-        console.log('Resend API error:', resendData);
+        console.error('Resend API error:', resendData.message || 'Unknown error');
         return c.json({ error: 'Failed to send reset email' }, 500);
       }
       
-      console.log('Password reset email sent successfully:', resendData);
+      debugLog('Password reset email sent successfully');
     } catch (emailError) {
-      console.log('Email sending exception:', emailError);
+      console.error('Email sending exception:', emailError);
       return c.json({ error: 'Failed to send reset email' }, 500);
     }
     
@@ -355,7 +363,7 @@ app.post('/make-server-5dec7914/forgot-password', async (c) => {
       message: 'If an account exists with this email, a password reset link has been sent.'
     });
   } catch (error) {
-    console.log('Forgot password exception:', error);
+    console.error('Forgot password exception:', error);
     return c.json({ error: 'Password reset failed' }, 500);
   }
 });
@@ -394,7 +402,7 @@ app.get('/make-server-5dec7914/listings', async (c) => {
     
     return c.json(result);
   } catch (error) {
-    console.log('Fetch listings exception:', error);
+    console.error('Fetch listings exception:', error);
     return c.json({ error: 'Failed to fetch listings' }, 500);
   }
 });
@@ -415,7 +423,7 @@ app.get('/make-server-5dec7914/listings/:id', async (c) => {
       .single();
     
     if (error) {
-      console.log('Fetch listing error:', error);
+      debugLog('Fetch listing error:', error.message);
       return c.json({ error: error.message }, 400);
     }
     
@@ -440,7 +448,7 @@ app.get('/make-server-5dec7914/listings/:id', async (c) => {
     
     return c.json({ listing: data });
   } catch (error) {
-    console.log('Fetch listing exception:', error);
+    console.error('Fetch listing exception:', error);
     return c.json({ error: 'Failed to fetch listing' }, 500);
   }
 });
@@ -469,7 +477,7 @@ app.post('/make-server-5dec7914/listings', async (c) => {
       .single();
     
     if (error) {
-      console.log('Create listing error:', error);
+      debugLog('Create listing error:', error.message);
       return c.json({ error: error.message }, 400);
     }
     
@@ -495,7 +503,7 @@ app.post('/make-server-5dec7914/listings', async (c) => {
         });
       
       if (reError) {
-        console.log('Create real estate details error:', reError);
+        console.error('Create real estate details error:', reError.message);
         // Delete the listing if real estate details fail
         await supabase.from('listings').delete().eq('id', data.id);
         return c.json({ error: 'Failed to create real estate details' }, 400);
@@ -505,13 +513,13 @@ app.post('/make-server-5dec7914/listings', async (c) => {
     // OPTIMIZATION: Geocode and save lat/lon for zipcode searches
     if (zip_code) {
       geocodeAndSave(data.id, zip_code).catch(err => 
-        console.log('Geocoding error (non-fatal):', err)
+        debugLog('Geocoding error (non-fatal):', err)
       );
     }
     
     return c.json({ listing: data });
   } catch (error) {
-    console.log('Create listing exception:', error);
+    console.error('Create listing exception:', error);
     return c.json({ error: 'Failed to create listing' }, 500);
   }
 });
@@ -550,7 +558,7 @@ app.put('/make-server-5dec7914/listings/:id', async (c) => {
       .single();
     
     if (error) {
-      console.log('Update listing error:', error);
+      debugLog('Update listing error:', error.message);
       return c.json({ error: error.message }, 400);
     }
     
@@ -599,13 +607,13 @@ app.put('/make-server-5dec7914/listings/:id', async (c) => {
     // OPTIMIZATION: Geocode and save lat/lon if zipcode changed
     if (zip_code) {
       geocodeAndSave(id, zip_code).catch(err => 
-        console.log('Geocoding error (non-fatal):', err)
+        debugLog('Geocoding error (non-fatal):', err)
       );
     }
     
     return c.json({ listing: data });
   } catch (error) {
-    console.log('Update listing exception:', error);
+    console.error('Update listing exception:', error);
     return c.json({ error: 'Failed to update listing' }, 500);
   }
 });

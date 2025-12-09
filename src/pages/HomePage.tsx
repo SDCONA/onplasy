@@ -408,7 +408,7 @@ export default function HomePage({ user }: HomePageProps) {
       <main className="max-w-[1920px] mx-auto px-0 py-8">
         {/* Results Count */}
         <div className="mb-6">
-          <p className="text-gray-600">
+          <p className="text-gray-600 ml-4">
             {listings.length} {listings.length === 1 ? 'listing' : 'listings'} found
           </p>
         </div>
