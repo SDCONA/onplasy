@@ -173,7 +173,7 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       formData.append('file', file);
 
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/upload-image`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/upload-image?type=avatar`,
         {
           method: 'POST',
           headers: {

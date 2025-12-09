@@ -1815,20 +1815,87 @@ app.post('/make-server-5dec7914/upload-image', async (c) => {
       return c.json({ error: 'File size must be less than 5MB' }, 400);
     }
 
-    // Convert File to ArrayBuffer for upload
+    // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
     
-    console.log(`Uploading image: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
+    // Get image type from query parameter (avatar or listing)
+    const imageType = c.req.query('type') || 'listing';
+    
+    console.log(`Processing ${imageType} image: ${file.name}, original size: ${file.size} bytes, type: ${file.type}`);
 
-    // Generate unique filename preserving the original extension
-    const extension = file.name.split('.').pop() || 'jpg';
+    // Compress and resize the image
+    let finalBuffer: ArrayBuffer;
+    let contentType = file.type;
+    
+    try {
+      // Dynamically import image processing library
+      const imagescript = await import('https://deno.land/x/imagescript@1.2.15/mod.ts');
+      
+      // Decode the image
+      let image;
+      if (file.type === 'image/png') {
+        image = await imagescript.Image.decode(new Uint8Array(arrayBuffer));
+      } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+        image = await imagescript.Image.decode(new Uint8Array(arrayBuffer));
+      } else if (file.type === 'image/gif') {
+        image = await imagescript.GIF.decode(new Uint8Array(arrayBuffer));
+        // For GIFs, just use the first frame
+        if (Array.isArray(image)) {
+          image = image[0];
+        }
+      } else if (file.type === 'image/webp') {
+        image = await imagescript.Image.decode(new Uint8Array(arrayBuffer));
+      } else {
+        throw new Error('Unsupported image type for compression');
+      }
+      
+      // Determine target size based on image type
+      // Avatars: 200x200 (displayed at 36x36 to ~100x100)
+      // Listings: 800px max width/height (displayed in cards and detail view)
+      const targetSize = imageType === 'avatar' ? 200 : 800;
+      
+      // Maintain aspect ratio for listings, force square for avatars
+      let resized;
+      if (imageType === 'avatar') {
+        resized = image.resize(targetSize, targetSize);
+      } else {
+        // For listing images, maintain aspect ratio
+        const width = image.width;
+        const height = image.height;
+        const maxDimension = Math.max(width, height);
+        
+        if (maxDimension > targetSize) {
+          const scale = targetSize / maxDimension;
+          const newWidth = Math.round(width * scale);
+          const newHeight = Math.round(height * scale);
+          resized = image.resize(newWidth, newHeight);
+        } else {
+          // Image is already small enough
+          resized = image;
+        }
+      }
+      
+      // Encode as JPEG with 85% quality for optimal size/quality balance
+      const encoded = await resized.encodeJPEG(85);
+      finalBuffer = encoded.buffer;
+      contentType = 'image/jpeg';
+      
+      console.log(`Image compressed: ${file.size} bytes -> ${finalBuffer.byteLength} bytes (${Math.round((1 - finalBuffer.byteLength / file.size) * 100)}% reduction)`);
+    } catch (compressionError) {
+      console.log('Compression failed, using original image:', compressionError);
+      // If compression fails, fall back to original image
+      finalBuffer = arrayBuffer;
+    }
+
+    // Generate unique filename
+    const extension = contentType === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() || 'jpg');
     const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
 
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
-      .upload(fileName, arrayBuffer, {
-        contentType: file.type,
+      .upload(fileName, finalBuffer, {
+        contentType: contentType,
         upsert: false
       });
 

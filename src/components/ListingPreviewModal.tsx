@@ -227,7 +227,7 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
         await navigator.clipboard.writeText(shareUrl);
         alert('Link copied to clipboard!');
       } catch (error) {
-        console.error('Failed to copy link:', error);
+        // Clipboard API blocked - silently fail
       }
     }
   };

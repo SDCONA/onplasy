@@ -87,7 +87,7 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
         await navigator.clipboard.writeText(shareUrl);
         alert('Link copied to clipboard!');
       } catch (error) {
-        console.error('Failed to copy link:', error);
+        // Clipboard API blocked - silently fail
       }
     }
   };
@@ -170,7 +170,7 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
           )}
 
           {listing.categories && (
-            <div className="mt-2">
+            <div className="mt-2 hidden md:block">
               <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
                 {listing.categories.name}
               </span>

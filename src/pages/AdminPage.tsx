@@ -1962,15 +1962,57 @@ function ListingCard({ listing, onPreview, onShowPreview, onRefresh, viewMode = 
           <p className="text-gray-600 text-sm truncate mb-2">{listing.profiles?.name}</p>
           <p className="text-gray-500 text-xs mb-3">{listing.categories?.name}</p>
           <button
-            onClick={() => {
-              onPreview(listing);
-              onShowPreview(true);
-            }}
+            onClick={() => setShowDetails(!showDetails)}
             className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
           >
-            View Details
+            {showDetails ? 'Hide' : 'Details'}
           </button>
         </div>
+
+        {/* Admin Actions in Grid View */}
+        {showDetails && (
+          <div className="p-4 bg-gray-50 border-t">
+            <div className="space-y-2">
+              <Link
+                to={`/listing/${listing.id}`}
+                target="_blank"
+                className="flex items-center justify-center gap-2 px-3 py-2 text-sm border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+              >
+                <Eye className="w-4 h-4" />
+                View
+              </Link>
+              
+              {listing.status === 'active' ? (
+                <button
+                  onClick={showDisableConfirm}
+                  disabled={actionLoading}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Disable
+                </button>
+              ) : (
+                <button
+                  onClick={showEnableConfirm}
+                  disabled={actionLoading}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Enable
+                </button>
+              )}
+
+              <button
+                onClick={showBanConfirm}
+                disabled={actionLoading}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                <Ban className="w-4 h-4" />
+                Ban User
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
