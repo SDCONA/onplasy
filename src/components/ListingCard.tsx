@@ -124,6 +124,29 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
               No Image
             </div>
           )}
+          
+          {/* Action buttons */}
+          <div className="absolute top-2 right-2 flex gap-2">
+            <button
+              onClick={handleShare}
+              className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
+              title="Share"
+            >
+              <Share2 className="w-4 h-4 text-gray-700" />
+            </button>
+            {user && (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
+                title={isSaved ? 'Unsave' : 'Save'}
+              >
+                <Heart 
+                  className={`w-4 h-4 ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`}
+                />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="p-3">

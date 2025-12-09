@@ -18,8 +18,15 @@ export default function Header({ user, unreadCount = 0 }: HeaderProps) {
   const isAdmin = user?.is_admin === true;
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/';
+    try {
+      await supabase.auth.signOut();
+      // Navigate to home - auth state change listener will update user state
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if there's an error, navigate away
+      navigate('/', { replace: true });
+    }
   };
 
   // Close mobile menu when route changes
@@ -81,12 +88,7 @@ export default function Header({ user, unreadCount = 0 }: HeaderProps) {
                   <span>Logout</span>
                 </button>
               </>
-            ) : (
-              <Link to="/auth" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-                <User className="w-5 h-5" />
-                <span>Sign In</span>
-              </Link>
-            )}
+            ) : null}
           </nav>
 
           {/* Mobile Menu Button */}

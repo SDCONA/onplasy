@@ -404,7 +404,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {archivedListings.map((listing) => (
-                  <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm opacity-60">
+                  <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm">
                     <ListingCard listing={listing} user={user} />
                     <div className="mt-4 space-y-2">
                       <p className="text-gray-600 text-center mb-2">
@@ -441,7 +441,6 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
         {/* Archive Modal */}
         {showArchiveModal && (
           <div className="fixed inset-0 flex items-center justify-center z-50">
-            <div className="absolute inset-0 bg-black bg-opacity-50" onClick={cancelArchive}></div>
             <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4 relative z-10">
               <h2 className="mb-4">Archive Listing</h2>
               <p className="text-gray-600 mb-6">Are you sure you want to archive this listing? You can renew it later.</p>
@@ -466,7 +465,6 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
         {/* Delete Modal */}
         {showDeleteModal && (
           <div className="fixed inset-0 flex items-center justify-center z-50">
-            <div className="absolute inset-0 bg-black bg-opacity-50" onClick={cancelDelete}></div>
             <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4 relative z-10">
               <h2 className="mb-4 text-red-600">Delete Listing Permanently</h2>
               <p className="text-gray-600 mb-6">Are you sure you want to permanently delete this listing? This action cannot be undone.</p>

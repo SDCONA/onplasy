@@ -27,8 +27,20 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    let mounted = true;
+    
+    // Set a timeout to force loading to complete after 5 seconds
+    const timeout = setTimeout(() => {
+      if (mounted) {
+        console.log('Loading timeout reached, forcing load complete');
+        setLoading(false);
+      }
+    }, 5000);
+    
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
+      
       if (session?.user) {
         // Fetch full profile data
         const token = session.access_token;
@@ -48,17 +60,28 @@ export default function App() {
             setUser(session.user);
           }
         } catch (error) {
-          console.error('Failed to fetch user profile:', error);
+          console.error('Profile fetch error:', error);
+          // Silently handle profile fetch errors
           setUser(session.user);
         }
       } else {
         setUser(null);
       }
       setLoading(false);
+      clearTimeout(timeout);
+    }).catch(error => {
+      console.error('Session fetch error:', error);
+      if (mounted) {
+        setUser(null);
+        setLoading(false);
+        clearTimeout(timeout);
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      
       if (session?.user) {
         // Fetch full profile data
         const token = session.access_token;
@@ -78,7 +101,8 @@ export default function App() {
             setUser(session.user);
           }
         } catch (error) {
-          console.error('Failed to fetch user profile:', error);
+          console.error('Profile fetch error on auth change:', error);
+          // Silently handle profile fetch errors
           setUser(session.user);
         }
       } else {
@@ -86,7 +110,11 @@ export default function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Fetch unread message count
@@ -134,7 +162,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );

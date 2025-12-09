@@ -53,20 +53,29 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       navigate('/auth');
       return;
     }
-    // Only fetch profile once on mount
+    
+    // Reset the fetch flag when user changes
+    hasFetchedProfile.current = false;
+    
+    // Fetch profile when user is available
     if (!hasFetchedProfile.current) {
       hasFetchedProfile.current = true;
       fetchProfile();
     }
-  }, []); // Empty dependency array - only run on mount
+  }, [user?.id]); // Re-run when user ID changes
 
   const fetchProfile = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      // Get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Session error:', sessionError);
         navigate('/auth');
         return;
       }
+
+      console.log('Fetching profile for user:', user.id, 'Session user:', session.user.id);
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/profile`,
@@ -76,7 +85,31 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
           }
         }
       );
+      
+      if (!response.ok) {
+        console.error('Profile fetch failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        // Set a basic profile so the page can still load
+        setProfile({
+          id: session.user.id,
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || '',
+          city: '',
+          zipcode: '',
+          avatar_url: session.user.user_metadata?.avatar_url || ''
+        });
+        setName(session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User');
+        setEmail(session.user.email || '');
+        setCity('');
+        setZipcode('');
+        setAvatarUrl(session.user.user_metadata?.avatar_url || '');
+        toast.error('Failed to load profile data');
+        return;
+      }
+      
       const data = await response.json();
+      console.log('Profile fetched:', data.profile);
       if (data.profile) {
         setProfile(data.profile);
         setName(data.profile.name || '');
@@ -87,6 +120,26 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error);
+      // Try to get whatever session data we have
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Set a basic profile so the page can still load
+        setProfile({
+          id: session.user.id,
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || '',
+          city: '',
+          zipcode: '',
+          avatar_url: session.user.user_metadata?.avatar_url || ''
+        });
+        setName(session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User');
+        setEmail(session.user.email || '');
+        setCity('');
+        setZipcode('');
+        setAvatarUrl(session.user.user_metadata?.avatar_url || '');
+      } else {
+        navigate('/auth');
+      }
       toast.error('Failed to load profile');
     }
   };
@@ -132,9 +185,11 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
 
       const data = await response.json();
       if (data.url) {
+        console.log('Avatar uploaded, URL:', data.url);
         setAvatarUrl(data.url);
         toast.success('Avatar uploaded successfully');
       } else {
+        console.error('No URL in response:', data);
         toast.error('Failed to upload avatar');
       }
     } catch (error) {
@@ -353,18 +408,25 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
               {/* Avatar Upload */}
               <div className="mb-6 flex flex-col items-center">
                 <div className="relative mb-4">
-                  <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center overflow-hidden border border-gray-200">
+                  <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
                     {avatarUrl ? (
-                      <ImageWithFallback
+                      <img
                         src={avatarUrl}
                         alt={name}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error('Avatar failed to load:', avatarUrl);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                        onLoad={() => {
+                          console.log('Avatar loaded successfully:', avatarUrl);
+                        }}
                       />
                     ) : (
-                      <span className="text-gray-500 text-4xl">{name[0] || 'U'}</span>
+                      <span className="text-gray-400 text-5xl uppercase">{name[0] || 'U'}</span>
                     )}
                   </div>
-                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-lg">
+                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-3 rounded-full cursor-pointer hover:bg-blue-700 shadow-lg transition-colors">
                     <Camera className="w-5 h-5" />
                     <input
                       type="file"
@@ -376,7 +438,7 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
                   </label>
                 </div>
                 {uploading && (
-                  <p className="text-sm text-gray-500">Uploading...</p>
+                  <p className="text-sm text-blue-600">Uploading avatar...</p>
                 )}
               </div>
 

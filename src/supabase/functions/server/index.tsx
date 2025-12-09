@@ -34,6 +34,13 @@ async function initStorage() {
         fileSizeLimit: 5242880 // 5MB per file
       });
       console.log('Storage bucket created:', BUCKET_NAME);
+    } else {
+      // Update existing bucket to ensure it's public
+      await supabase.storage.updateBucket(BUCKET_NAME, {
+        public: true,
+        fileSizeLimit: 5242880
+      });
+      console.log('Storage bucket updated to public:', BUCKET_NAME);
     }
   } catch (error) {
     console.error('Storage initialization error:', error);
@@ -57,10 +64,20 @@ app.get('/make-server-5dec7914/recaptcha-site-key', async (c) => {
 // Helper to get authenticated user
 async function getAuthUser(request: Request) {
   const accessToken = request.headers.get('Authorization')?.split(' ')[1];
-  if (!accessToken) return null;
+  if (!accessToken) {
+    console.log('No access token provided');
+    return null;
+  }
   
   const { data: { user }, error } = await supabase.auth.getUser(accessToken);
-  if (error || !user) return null;
+  if (error) {
+    console.log('Auth error:', error.message, 'Code:', error.status);
+    return null;
+  }
+  if (!user) {
+    console.log('No user found for token');
+    return null;
+  }
   
   return user;
 }
