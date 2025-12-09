@@ -253,16 +253,26 @@ app.post('/make-server-5dec7914/forgot-password', async (c) => {
       return c.json({ error: 'Email is required' }, 400);
     }
     
-    // Verify user exists
-    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
-    const userExists = userData?.users?.find(u => u.email === email);
+    // Rate limiting: Check if a reset was requested in the last 60 seconds
+    const rateLimitKey = `password_reset_rate_limit:${email}`;
+    const lastResetTime = await kv.get(rateLimitKey);
     
-    if (!userExists) {
-      // Don't reveal if user exists or not for security
-      return c.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
+    if (lastResetTime) {
+      const timeSinceLastReset = Date.now() - parseInt(lastResetTime);
+      const remainingSeconds = Math.ceil((60000 - timeSinceLastReset) / 1000);
+      
+      if (timeSinceLastReset < 60000) { // 60 seconds
+        return c.json({ 
+          error: `Please wait ${remainingSeconds} seconds before requesting another password reset.` 
+        }, 429);
+      }
     }
     
-    // Generate password reset link
+    // Set rate limit timestamp
+    await kv.set(rateLimitKey, Date.now().toString(), 60); // Expires in 60 seconds
+    
+    // Generate password reset link (optimized - single query instead of loading all users)
+    // This will fail gracefully if user doesn't exist
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
@@ -271,9 +281,10 @@ app.post('/make-server-5dec7914/forgot-password', async (c) => {
       }
     });
     
+    // Always return same message for security (don't reveal if user exists or not)
     if (resetError) {
-      console.log('Reset link generation error:', resetError);
-      return c.json({ error: 'Failed to generate reset link' }, 500);
+      console.log('Reset link generation error (user may not exist):', resetError);
+      return c.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
     }
     
     // Send reset email via Resend

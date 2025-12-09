@@ -20,6 +20,9 @@ export default function AuthPage() {
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState<'success' | 'error'>('success');
 
+  // Password reset rate limiting
+  const [resetCooldown, setResetCooldown] = useState(0);
+
   // Password strength requirements
   const passwordRequirements = {
     minLength: password.length >= 8,
@@ -125,6 +128,14 @@ export default function AuthPage() {
       return;
     }
 
+    if (resetCooldown > 0) {
+      setModalType('error');
+      setModalMessage('Please wait a moment before requesting another password reset.');
+      setShowModal(true);
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/forgot-password`, {
         method: 'POST',
@@ -146,6 +157,14 @@ export default function AuthPage() {
         setModalMessage('Password reset email sent successfully! Please check your inbox and follow the instructions to reset your password.');
         setShowModal(true);
         setIsLogin(true);
+        // Set cooldown for 1 minute
+        setResetCooldown(60);
+        const timer = setInterval(() => {
+          setResetCooldown(prev => prev - 1);
+        }, 1000);
+        setTimeout(() => {
+          clearInterval(timer);
+        }, 60000);
       }
     } catch (err) {
       setModalType('error');
@@ -184,10 +203,10 @@ export default function AuthPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || resetCooldown > 0}
               className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Processing...' : 'Reset Password'}
+              {loading ? 'Processing...' : resetCooldown > 0 ? `Wait ${resetCooldown}s` : 'Reset Password'}
             </button>
 
             <div className="mt-6 text-center">
