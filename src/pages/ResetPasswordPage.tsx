@@ -12,6 +12,31 @@ export default function ResetPasswordPage() {
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState<'success' | 'error'>('success');
+  const [sessionReady, setSessionReady] = useState(false);
+
+  // Exchange the recovery token for a session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      // First, let Supabase's detectSessionInUrl handle the hash automatically
+      // by just waiting a moment for it to process
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Now check if we have a session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (session) {
+        console.log('Recovery session established successfully');
+        setSessionReady(true);
+      } else {
+        console.error('No session found:', sessionError);
+        setModalType('error');
+        setModalMessage('Invalid or expired reset link. Please request a new password reset from the login page.');
+        setShowModal(true);
+      }
+    };
+
+    checkSession();
+  }, []);
 
   // Password strength requirements
   const passwordRequirements = {
