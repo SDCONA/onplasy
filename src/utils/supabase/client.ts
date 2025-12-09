@@ -17,6 +17,8 @@ export const getSupabaseClient = () => {
           detectSessionInUrl: true,
           // Suppress refresh token errors to console
           debug: false,
+          // Set the redirect URL for email confirmations
+          flowType: 'pkce',
         }
       }
     );

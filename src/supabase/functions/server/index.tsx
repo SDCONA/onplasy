@@ -244,6 +244,111 @@ app.post('/make-server-5dec7914/auth/signup', async (c) => {
   }
 });
 
+// Password reset endpoint
+app.post('/make-server-5dec7914/forgot-password', async (c) => {
+  try {
+    const { email } = await c.req.json();
+    
+    if (!email) {
+      return c.json({ error: 'Email is required' }, 400);
+    }
+    
+    // Verify user exists
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+    const userExists = userData?.users?.find(u => u.email === email);
+    
+    if (!userExists) {
+      // Don't reveal if user exists or not for security
+      return c.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
+    }
+    
+    // Generate password reset link
+    const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: 'https://www.onplasy.com/reset-password'
+      }
+    });
+    
+    if (resetError) {
+      console.log('Reset link generation error:', resetError);
+      return c.json({ error: 'Failed to generate reset link' }, 500);
+    }
+    
+    // Send reset email via Resend
+    try {
+      const resendApiKey = Deno.env.get('RESEND_API_KEY');
+      if (!resendApiKey) {
+        console.log('RESEND_API_KEY not configured');
+        return c.json({ error: 'Email service not configured' }, 500);
+      }
+      
+      const resendResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${resendApiKey}`
+        },
+        body: JSON.stringify({
+          from: 'OnPlasy <noreply@onplasy.com>',
+          to: [email],
+          subject: 'Reset your OnPlasy password',
+          html: `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Reset your password</title>
+              </head>
+              <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background-color: #f8f9fa; border-radius: 10px; padding: 30px; margin-bottom: 20px;">
+                  <h1 style="color: #2563eb; margin-top: 0;">Reset Your Password</h1>
+                  <p style="font-size: 16px;">Hi there,</p>
+                  <p style="font-size: 16px;">We received a request to reset your password for your OnPlasy account. Click the button below to create a new password:</p>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${resetData.properties.action_link}" 
+                       style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-size: 16px; display: inline-block;">
+                      Reset Password
+                    </a>
+                  </div>
+                  <p style="font-size: 14px; color: #666;">If the button above doesn't work, copy and paste this link into your browser:</p>
+                  <p style="font-size: 14px; color: #2563eb; word-break: break-all;">${resetData.properties.action_link}</p>
+                  <p style="font-size: 14px; color: #666; margin-top: 30px;">This password reset link will expire in 1 hour.</p>
+                  <p style="font-size: 14px; color: #666;">If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.</p>
+                </div>
+                <div style="text-align: center; font-size: 12px; color: #999;">
+                  <p>&copy; ${new Date().getFullYear()} OnPlasy. All rights reserved.</p>
+                </div>
+              </body>
+            </html>
+          `
+        })
+      });
+      
+      const resendData = await resendResponse.json();
+      
+      if (!resendResponse.ok) {
+        console.log('Resend API error:', resendData);
+        return c.json({ error: 'Failed to send reset email' }, 500);
+      }
+      
+      console.log('Password reset email sent successfully:', resendData);
+    } catch (emailError) {
+      console.log('Email sending exception:', emailError);
+      return c.json({ error: 'Failed to send reset email' }, 500);
+    }
+    
+    return c.json({ 
+      message: 'If an account exists with this email, a password reset link has been sent.'
+    });
+  } catch (error) {
+    console.log('Forgot password exception:', error);
+    return c.json({ error: 'Password reset failed' }, 500);
+  }
+});
+
 // Listings routes (OPTIMIZED with database-level pagination)
 app.get('/make-server-5dec7914/listings', async (c) => {
   try {

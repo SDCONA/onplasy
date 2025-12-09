@@ -126,13 +126,20 @@ export default function AuthPage() {
     }
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${publicAnonKey}`
+        },
+        body: JSON.stringify({ email })
       });
 
-      if (error) {
+      const data = await response.json();
+
+      if (!response.ok) {
         setModalType('error');
-        setModalMessage(`Failed to send reset email: ${error.message}`);
+        setModalMessage(`Failed to send reset email: ${data.error}`);
         setShowModal(true);
       } else {
         setModalType('success');
