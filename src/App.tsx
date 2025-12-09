@@ -20,6 +20,7 @@ import AuthPage from './pages/AuthPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -215,6 +216,7 @@ export default function App() {
         />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
       </Routes>
     </Router>
   );

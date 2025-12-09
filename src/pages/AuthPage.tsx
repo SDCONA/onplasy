@@ -85,7 +85,7 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
@@ -93,6 +93,16 @@ export default function AuthPage() {
       if (error) {
         setError(error.message);
       } else {
+        // Check if email is verified
+        if (data.user && !data.user.email_confirmed_at) {
+          // Sign out the user since email is not verified
+          await supabase.auth.signOut();
+          setModalType('error');
+          setModalMessage('Please verify your email address before logging in. Check your inbox for the verification email.');
+          setShowModal(true);
+          setLoading(false);
+          return;
+        }
         navigate('/');
       }
     } catch (err) {

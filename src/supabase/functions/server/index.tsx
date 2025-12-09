@@ -160,6 +160,9 @@ app.post('/make-server-5dec7914/auth/signup', async (c) => {
     const { data: verificationData, error: verificationError } = await supabase.auth.admin.generateLink({
       type: 'signup',
       email: email,
+      options: {
+        redirectTo: 'https://www.onplasy.com/verify-email'
+      }
     });
     
     if (verificationError) {
@@ -182,7 +185,7 @@ app.post('/make-server-5dec7914/auth/signup', async (c) => {
           'Authorization': `Bearer ${resendApiKey}`
         },
         body: JSON.stringify({
-          from: 'OnPlasy <onboarding@resend.dev>',
+          from: 'OnPlasy <noreply@onplasy.com>',
           to: [email],
           subject: 'Verify your OnPlasy account',
           html: `
