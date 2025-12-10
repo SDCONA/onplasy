@@ -1921,6 +1921,96 @@ app.put('/make-server-5dec7914/profile', async (c) => {
   }
 });
 
+// Notification preferences routes
+app.get('/make-server-5dec7914/notification-preferences', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const { data, error } = await supabase
+      .from('user_notification_preferences')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (error) {
+      // If preferences don't exist, return default (enabled)
+      if (error.code === 'PGRST116') {
+        return c.json({ 
+          preferences: { 
+            user_id: user.id,
+            email_notifications_enabled: true 
+          } 
+        });
+      }
+      console.log('Fetch notification preferences error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+    
+    return c.json({ preferences: data });
+  } catch (error) {
+    console.log('Fetch notification preferences exception:', error);
+    return c.json({ error: 'Failed to fetch notification preferences' }, 500);
+  }
+});
+
+app.put('/make-server-5dec7914/notification-preferences', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const { email_notifications_enabled } = await c.req.json();
+    
+    // Check if preferences exist
+    const { data: existing } = await supabase
+      .from('user_notification_preferences')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    
+    let data, error;
+    
+    if (existing) {
+      // Update existing preferences
+      const result = await supabase
+        .from('user_notification_preferences')
+        .update({
+          email_notifications_enabled,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // Insert new preferences
+      const result = await supabase
+        .from('user_notification_preferences')
+        .insert({
+          user_id: user.id,
+          email_notifications_enabled
+        })
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    }
+    
+    if (error) {
+      console.log('Update notification preferences error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+    
+    return c.json({ preferences: data });
+  } catch (error) {
+    console.log('Update notification preferences exception:', error);
+    return c.json({ error: 'Failed to update notification preferences' }, 500);
+  }
+});
+
 // Upload image endpoint
 app.post('/make-server-5dec7914/upload-image', async (c) => {
   try {

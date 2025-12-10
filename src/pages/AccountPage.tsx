@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, User, Lock, MapPin, Mail, Check } from 'lucide-react';
+import { ArrowLeft, Camera, User, Lock, MapPin, Mail, Check, Bell } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
@@ -30,6 +30,10 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Notification preferences
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true);
+  const [prefsLoading, setPrefsLoading] = useState(false);
 
   // Modal state for password change feedback
   const [showModal, setShowModal] = useState(false);
@@ -61,6 +65,7 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
     if (!hasFetchedProfile.current) {
       hasFetchedProfile.current = true;
       fetchProfile();
+      fetchNotificationPreferences();
     }
   }, [user?.id]); // Re-run when user ID changes
 
@@ -141,6 +146,42 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
         navigate('/auth');
       }
       toast.error('Failed to load profile');
+    }
+  };
+
+  const fetchNotificationPreferences = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to fetch notification preferences');
+        return;
+      }
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/notification-preferences`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Notification preferences fetch failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        toast.error('Failed to load notification preferences');
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Notification preferences fetched:', data.preferences);
+      if (data.preferences) {
+        setEmailNotificationsEnabled(data.preferences.email_notifications_enabled);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notification preferences:', error);
+      toast.error('Failed to load notification preferences');
     }
   };
 
@@ -336,6 +377,49 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
     }
   };
 
+  const handleToggleEmailNotifications = async () => {
+    setPrefsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to update notification preferences');
+        setPrefsLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/notification-preferences`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email_notifications_enabled: !emailNotificationsEnabled
+          })
+        }
+      );
+
+      const data = await response.json();
+      if (data.preferences) {
+        setEmailNotificationsEnabled(data.preferences.email_notifications_enabled);
+        toast.success(
+          data.preferences.email_notifications_enabled 
+            ? 'Email notifications enabled' 
+            : 'Email notifications disabled'
+        );
+      } else {
+        toast.error(`Failed to update preferences: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Update notification preferences error:', error);
+      toast.error('Failed to update notification preferences');
+    } finally {
+      setPrefsLoading(false);
+    }
+  };
+
   if (!user) {
     return null;
   }
@@ -389,6 +473,17 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
               >
                 <Lock className="w-4 h-4" />
                 Security
+              </button>
+              <button
+                onClick={() => setActiveTab('notifications')}
+                className={`px-6 py-3 flex items-center gap-2 ${
+                  activeTab === 'notifications'
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Bell className="w-4 h-4" />
+                Notifications
               </button>
             </div>
           </div>
@@ -589,6 +684,47 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
                 {loading ? 'Changing...' : 'Change Password'}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="mb-6">Notification Preferences</h2>
+            
+            <div className="space-y-4">
+              {/* Email Notifications Toggle */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Mail className="w-5 h-5 text-gray-600" />
+                    <h3 className="text-gray-900">Email Notifications</h3>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Receive email notifications when you have new unread messages
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleEmailNotifications}
+                  disabled={prefsLoading}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    emailNotificationsEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                  } ${prefsLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                      emailNotificationsEnabled ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Email notifications are sent every 30 minutes if you have new unread messages. You will only be notified once per message.
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </main>
