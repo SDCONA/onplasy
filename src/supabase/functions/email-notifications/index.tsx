@@ -6,7 +6,19 @@ const resendApiKey = Deno.env.get('RESEND_API_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // This function runs every 30 minutes via cron
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  // Allow cron jobs to invoke this function
+  // Cron jobs come from Supabase's internal network
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
+  // Handle OPTIONS requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
     console.log('Starting email notification check...');
     
@@ -190,14 +202,14 @@ Deno.serve(async () => {
       }), 
       { 
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       }
     );
   } catch (error) {
     console.error('Email notification error:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to process email notifications' }), 
-      { status: 500 }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
 });
