@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Star, Flag } from 'lucide-react';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Star, Flag, Heart, FileText, Archive } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import ListingCard from '../components/ListingCard';
@@ -12,12 +12,17 @@ interface ProfilePageProps {
 
 export default function ProfilePage({ currentUser }: ProfilePageProps) {
   const { userId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('listings');
   const [showReportModal, setShowReportModal] = useState(false);
+
+  // Get the return path from location state, default to home
+  const returnPath = (location.state as any)?.from || '/';
 
   useEffect(() => {
     fetchProfile();
@@ -117,7 +122,7 @@ export default function ProfilePage({ currentUser }: ProfilePageProps) {
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-16 z-40 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link to="/" className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
+          <Link to={returnPath} className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
             <ArrowLeft className="w-5 h-5" />
             <span>Back</span>
           </Link>
@@ -126,9 +131,10 @@ export default function ProfilePage({ currentUser }: ProfilePageProps) {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-24 h-24 bg-white border-2 border-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Avatar in top-left corner */}
+            <div className="flex-shrink-0">
+              <div className="w-24 h-24 bg-white border-2 border-gray-200 rounded-full flex items-center justify-center overflow-hidden">
                 {profile.avatar_url ? (
                   <ImageWithFallback
                     src={profile.avatar_url}
@@ -139,26 +145,26 @@ export default function ProfilePage({ currentUser }: ProfilePageProps) {
                   <span className="text-gray-500 text-3xl">{profile.name[0]}</span>
                 )}
               </div>
-              
-              {/* Rating under profile image */}
-              {profile.rating_count > 0 && (
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm font-medium">{profile.rating_average?.toFixed(1)}</span>
-                  <span className="text-xs text-gray-400">({profile.rating_count})</span>
-                </div>
-              )}
-              
-              {/* Registered since under rating */}
-              <p className="text-xs text-gray-500 text-center">
-                Registered {formatDate(profile.created_at)}
-              </p>
             </div>
 
             <div className="flex-1">
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h1 className="mb-2">{profile.name}</h1>
+                  
+                  {/* Rating and registration date */}
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    {profile.rating_count > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="font-medium">{profile.rating_average?.toFixed(1)}</span>
+                        <span className="text-gray-400">({profile.rating_count})</span>
+                      </div>
+                    )}
+                    <p className="text-gray-500">
+                      Registered {formatDate(profile.created_at)}
+                    </p>
+                  </div>
                 </div>
                 {currentUser && currentUser.id !== userId && (
                   <button
@@ -175,6 +181,20 @@ export default function ProfilePage({ currentUser }: ProfilePageProps) {
                   {listings.length} active listings
                 </div>
               </div>
+
+              {/* Quick Action Buttons - only show if viewing own profile */}
+              {currentUser && currentUser.id === userId && (
+                <div className="flex flex-wrap gap-3 mt-4">
+                  <Link 
+                    to="/my-listings"
+                    state={{ from: 'profile' }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>My Listings</span>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

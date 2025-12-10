@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Search, X } from 'lucide-react';
 import { projectId } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { publicAnonKey } from '../utils/supabase/info';
@@ -13,6 +13,18 @@ interface MessagesPageProps {
 export default function MessagesPage({ user }: MessagesPageProps) {
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filtered conversations based on search query
+  const filteredConversations = conversations.filter(conversation => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      conversation.other_user.name?.toLowerCase().includes(query) ||
+      conversation.listing?.title?.toLowerCase().includes(query) ||
+      conversation.last_message.content?.toLowerCase().includes(query)
+    );
+  });
 
   useEffect(() => {
     fetchConversations();
@@ -76,25 +88,72 @@ export default function MessagesPage({ user }: MessagesPageProps) {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="mb-6">Messages</h1>
 
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, listing, or message..."
+              className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
-        ) : conversations.length === 0 ? (
+        ) : filteredConversations.length === 0 ? (
           <div className="bg-white rounded-lg p-12 text-center">
             <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No messages yet</p>
-            <p className="text-gray-400 mt-2">Start a conversation by contacting a seller</p>
+            {searchQuery ? (
+              <>
+                <p className="text-gray-500">No conversations found</p>
+                <p className="text-gray-400 mt-2">Try a different search term</p>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-500">No messages yet</p>
+                <p className="text-gray-400 mt-2">Start a conversation by contacting a seller</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm divide-y divide-gray-200">
-            {conversations.map((conversation) => (
+            {filteredConversations.map((conversation) => (
               <Link
                 key={conversation.conversation_id}
                 to={`/messages/${conversation.conversation_id}?recipientId=${conversation.other_user.id}&listingId=${conversation.listing_id || ''}`}
                 className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
               >
-                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                {/* Listing Image */}
+                {conversation.listing && conversation.listing.images && conversation.listing.images.length > 0 ? (
+                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                    <ImageWithFallback
+                      src={conversation.listing.images[0]}
+                      alt={conversation.listing.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0 flex items-center justify-center">
+                    <MessageCircle className="w-6 h-6 text-gray-400" />
+                  </div>
+                )}
+
+                {/* User Avatar */}
+                <div className="hidden sm:flex w-12 h-12 bg-gray-200 rounded-full items-center justify-center flex-shrink-0">
                   {conversation.other_user.avatar_url ? (
                     <ImageWithFallback
                       src={conversation.other_user.avatar_url}
@@ -115,6 +174,11 @@ export default function MessagesPage({ user }: MessagesPageProps) {
                       {formatDate(conversation.last_message.created_at)}
                     </span>
                   </div>
+                  {conversation.listing && (
+                    <p className="text-gray-500 text-sm truncate mb-1">
+                      {conversation.listing.title}
+                    </p>
+                  )}
                   <p className="text-gray-600 truncate">
                     {conversation.last_message.sender_id === user.id ? 'You: ' : ''}
                     {conversation.last_message.content}

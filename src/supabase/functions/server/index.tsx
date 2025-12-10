@@ -858,7 +858,8 @@ app.get('/make-server-5dec7914/conversations', async (c) => {
         created_at,
         is_read,
         sender:profiles!messages_sender_id_fkey(id, name, avatar_url),
-        recipient:profiles!messages_recipient_id_fkey(id, name, avatar_url)
+        recipient:profiles!messages_recipient_id_fkey(id, name, avatar_url),
+        listing:listings(id, title, price, images, status)
       `)
       .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
@@ -885,6 +886,7 @@ app.get('/make-server-5dec7914/conversations', async (c) => {
         conversationMap.set(message.conversation_id, {
           conversation_id: message.conversation_id,
           listing_id: message.listing_id,
+          listing: message.listing,
           other_user: otherUser,
           last_message: message,
           unread_count: unreadCount

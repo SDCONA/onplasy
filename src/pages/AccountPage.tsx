@@ -360,15 +360,8 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6">
           <h1>My Account</h1>
-          <Link 
-            to={`/profile/${user.id}`}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <User className="w-4 h-4" />
-            View My Profile
-          </Link>
         </div>
 
         {/* Tabs */}

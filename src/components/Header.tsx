@@ -66,9 +66,9 @@ export default function Header({ user, unreadCount = 0 }: HeaderProps) {
                   <Heart className="w-5 h-5" />
                   <span>Saved</span>
                 </Link>
-                <Link to="/my-listings" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
+                <Link to={`/profile/${user.id}`} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
                   <User className="w-5 h-5" />
-                  <span>My Listings</span>
+                  <span>My Profile</span>
                 </Link>
                 <Link to="/account" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
                   <Settings className="w-5 h-5" />
@@ -107,7 +107,7 @@ export default function Header({ user, unreadCount = 0 }: HeaderProps) {
                 <Link to="/saved" className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
                   <Heart className="w-6 h-6" strokeWidth={2.5} />
                 </Link>
-                <Link to="/my-listings" className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                <Link to={`/profile/${user.id}`} className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
                   <User className="w-6 h-6" strokeWidth={2.5} />
                 </Link>
               </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Heart } from 'lucide-react';
 import { projectId } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
@@ -11,6 +11,7 @@ interface SavedListingsPageProps {
 }
 
 export default function SavedListingsPage({ user }: SavedListingsPageProps) {
+  const location = useLocation();
   const [savedListings, setSavedListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -97,11 +98,14 @@ export default function SavedListingsPage({ user }: SavedListingsPageProps) {
     setHasMore(true);
   };
 
+  // Get the return path from location state, default to home
+  const returnPath = (location.state as any)?.from === 'profile' ? `/profile/${user?.id}` : '/';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-16 z-40 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link to="/" className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
+          <Link to={returnPath} className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
             <ArrowLeft className="w-5 h-5" />
             <span>Back</span>
           </Link>

@@ -22,6 +22,7 @@ export default function ConversationPage({ user }: ConversationPageProps) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [otherUser, setOtherUser] = useState<any>(null);
+  const [listing, setListing] = useState<any>(null);
   const [hasReviewedUser, setHasReviewedUser] = useState(false);
   const [currentUserMessageCount, setCurrentUserMessageCount] = useState(0);
   const [otherUserMessageCount, setOtherUserMessageCount] = useState(0);
@@ -81,6 +82,16 @@ export default function ConversationPage({ user }: ConversationPageProps) {
           if (currentUserCount >= 5 && otherCount >= 5) {
             checkIfAlreadyReviewed(other.id);
           }
+        }
+        
+        // Fetch listing details if listingId is provided
+        if (listingId) {
+          const { data: listingData } = await supabase
+            .from('listings')
+            .select('*')
+            .eq('id', listingId)
+            .single();
+          setListing(listingData);
         }
       }
     } catch (error) {
@@ -175,17 +186,24 @@ export default function ConversationPage({ user }: ConversationPageProps) {
       return 'Yesterday';
     } else {
       return messageDate.toLocaleDateString('en-US', {
-        month: 'short',
+        month: 'long',
         day: 'numeric',
         year: 'numeric'
       });
     }
   };
 
+  // Helper function to get minute identifier (YYYY-MM-DD HH:MM)
+  const getMinuteIdentifier = (date: string) => {
+    const d = new Date(date);
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}-${d.getMinutes()}`;
+  };
+
   // Check if review card should be shown based on both users having sent 5+ messages
   const shouldShowReviewCard = currentUserMessageCount >= 5 && otherUserMessageCount >= 5;
 
   let lastDate = '';
+  let lastMinute = '';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -218,6 +236,34 @@ export default function ConversationPage({ user }: ConversationPageProps) {
       </header>
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 overflow-hidden flex flex-col">
+        {/* Listing Card */}
+        {listing && (
+          <Link
+            to={`/listing/${listing.id}`}
+            state={{ from: `/messages/${conversationId}?recipientId=${recipientId}&listingId=${listingId}` }}
+            className="bg-white rounded-lg shadow-sm p-4 mb-4 flex gap-4 hover:bg-gray-50 transition-colors"
+          >
+            {listing.images && listing.images.length > 0 && (
+              <div className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                <ImageWithFallback
+                  src={listing.images[0]}
+                  alt={listing.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="truncate mb-1">{listing.title}</p>
+              <p className="text-blue-600">${listing.price.toLocaleString()}</p>
+              {listing.status && (
+                <p className="text-gray-500 text-sm mt-1">
+                  Status: {listing.status}
+                </p>
+              )}
+            </div>
+          </Link>
+        )}
+
         <div className="flex-1 bg-white rounded-lg shadow-sm overflow-y-auto mb-4 p-4" style={{ overflowAnchor: 'none' }}>
           {loading ? (
             <div className="flex justify-center items-center h-full">
@@ -233,32 +279,85 @@ export default function ConversationPage({ user }: ConversationPageProps) {
                 const showDate = formatDate(message.created_at) !== lastDate;
                 lastDate = formatDate(message.created_at);
                 
+                // Check if we need to show time (minute changed)
+                const currentMinute = getMinuteIdentifier(message.created_at);
+                const showTime = currentMinute !== lastMinute;
+                lastMinute = currentMinute;
+                
                 // Show review card after the 10th message (index 9) when both users have 5+ messages
                 const showReviewCardHere = index === 9 && shouldShowReviewCard && otherUser;
                 
                 return (
                   <div key={message.id}>
                     {showDate && (
-                      <div className="text-center my-4">
-                        <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                          {formatDate(message.created_at)}
+                      <div className="text-center my-6">
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300"></div>
+                          </div>
+                          <div className="relative flex justify-center">
+                            <span className="px-4 py-1 bg-gray-50 text-gray-600 text-sm">
+                              {formatDate(message.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {showTime && (
+                      <div className="text-center my-3">
+                        <span className="text-gray-500 text-xs">
+                          {formatTime(message.created_at)}
                         </span>
                       </div>
                     )}
                     
-                    <div className={`flex ${message.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`flex gap-2 ${message.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
+                      {/* Avatar for other user (left side) */}
+                      {message.sender_id !== user.id && (
+                        <Link
+                          to={`/profile/${message.sender.id}`}
+                          state={{ from: `/messages/${conversationId}?recipientId=${recipientId}&listingId=${listingId}` }}
+                          className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0 flex items-center justify-center hover:opacity-80 transition-opacity"
+                        >
+                          {message.sender.avatar_url ? (
+                            <ImageWithFallback
+                              src={message.sender.avatar_url}
+                              alt={message.sender.name}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-gray-500 text-sm">{message.sender.name[0]}</span>
+                          )}
+                        </Link>
+                      )}
+                      
                       <div className={`max-w-xs lg:max-w-md ${
                         message.sender_id === user.id
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-100 text-gray-900'
                       } rounded-lg px-4 py-2`}>
                         <p className="break-words">{message.content}</p>
-                        <p className={`text-xs mt-1 ${
-                          message.sender_id === user.id ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
-                          {formatTime(message.created_at)}
-                        </p>
                       </div>
+                      
+                      {/* Avatar for current user (right side) */}
+                      {message.sender_id === user.id && (
+                        <Link
+                          to={`/profile/${user.id}`}
+                          state={{ from: `/messages/${conversationId}?recipientId=${recipientId}&listingId=${listingId}` }}
+                          className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0 flex items-center justify-center hover:opacity-80 transition-opacity"
+                        >
+                          {user.avatar_url ? (
+                            <ImageWithFallback
+                              src={user.avatar_url}
+                              alt={user.name}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-gray-500 text-sm">{user.name[0]}</span>
+                          )}
+                        </Link>
+                      )}
                     </div>
                     
                     {showReviewCardHere && (

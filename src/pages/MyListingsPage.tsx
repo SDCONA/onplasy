@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, RefreshCw, Edit, Trash2, Archive } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { ArrowLeft, Plus, RefreshCw, Edit, Trash2, Archive, Search, X } from 'lucide-react';
 import { projectId } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { publicAnonKey } from '../utils/supabase/info';
@@ -11,11 +11,13 @@ interface MyListingsPageProps {
 }
 
 export default function MyListingsPage({ user }: MyListingsPageProps) {
+  const location = useLocation();
   const [activeListings, setActiveListings] = useState<any[]>([]);
   const [archivedListings, setArchivedListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [activeTab, setActiveTab] = useState('active');
+  // Get initial active tab from location state, default to 'active'
+  const [activeTab, setActiveTab] = useState((location.state as any)?.activeTab || 'active');
   const [hasMoreActive, setHasMoreActive] = useState(true);
   const [hasMoreArchived, setHasMoreArchived] = useState(true);
   const [activeOffset, setActiveOffset] = useState(0);
@@ -25,8 +27,32 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Filtered listings based on search query
+  const filteredActiveListings = activeListings.filter(listing => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      listing.title?.toLowerCase().includes(query) ||
+      listing.description?.toLowerCase().includes(query) ||
+      listing.category?.toLowerCase().includes(query) ||
+      listing.price?.toString().includes(query)
+    );
+  });
+
+  const filteredArchivedListings = archivedListings.filter(listing => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      listing.title?.toLowerCase().includes(query) ||
+      listing.description?.toLowerCase().includes(query) ||
+      listing.category?.toLowerCase().includes(query) ||
+      listing.price?.toString().includes(query)
+    );
+  });
 
   useEffect(() => {
     fetchActiveListings();
@@ -285,12 +311,15 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
     setListingToDelete(null);
   };
 
+  // Get the return path from location state, default to home
+  const returnPath = (location.state as any)?.from === 'profile' ? `/profile/${user?.id}` : '/';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-16 z-40 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
+            <Link to={returnPath} className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
               <ArrowLeft className="w-5 h-5" />
               <span>Back</span>
             </Link>
@@ -336,12 +365,34 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
           </div>
         </div>
 
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by title, description, category, or price..."
+              className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
         ) : activeTab === 'active' ? (
-          activeListings.length === 0 ? (
+          filteredActiveListings.length === 0 ? (
             <div className="bg-white rounded-lg p-12 text-center">
               <p className="text-gray-500 mb-4">No active listings</p>
               <Link
@@ -355,7 +406,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {activeListings.map((listing) => (
+                {filteredActiveListings.map((listing) => (
                   <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm">
                     <ListingCard listing={listing} user={user} />
                     <div className="mt-4 space-y-2">
@@ -396,14 +447,14 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
             </>
           )
         ) : (
-          archivedListings.length === 0 ? (
+          filteredArchivedListings.length === 0 ? (
             <div className="bg-white rounded-lg p-12 text-center">
               <p className="text-gray-500">No archived listings</p>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {archivedListings.map((listing) => (
+                {filteredArchivedListings.map((listing) => (
                   <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm">
                     <ListingCard listing={listing} user={user} />
                     <div className="mt-4 space-y-2">
