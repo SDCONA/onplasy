@@ -24,6 +24,12 @@ export default function MessagesPage({ user }: MessagesPageProps) {
       conversation.listing?.title?.toLowerCase().includes(query) ||
       conversation.last_message.content?.toLowerCase().includes(query)
     );
+  }).sort((a, b) => {
+    // Sort unread conversations first
+    if (a.unread_count > 0 && b.unread_count === 0) return -1;
+    if (a.unread_count === 0 && b.unread_count > 0) return 1;
+    // Then sort by most recent message
+    return new Date(b.last_message.created_at).getTime() - new Date(a.last_message.created_at).getTime();
   });
 
   useEffect(() => {
@@ -135,7 +141,9 @@ export default function MessagesPage({ user }: MessagesPageProps) {
               <Link
                 key={conversation.conversation_id}
                 to={`/messages/${conversation.conversation_id}?recipientId=${conversation.other_user.id}&listingId=${conversation.listing_id || ''}`}
-                className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+                className={`flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors relative ${
+                  conversation.unread_count > 0 ? 'border-l-4 border-l-green-500' : ''
+                }`}
               >
                 {/* Listing Image */}
                 {conversation.listing && conversation.listing.images && conversation.listing.images.length > 0 ? (

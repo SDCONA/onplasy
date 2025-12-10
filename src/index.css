@@ -1263,6 +1263,10 @@
     border-left-color: var(--color-blue-600);
   }
 
+  .border-l-green-500 {
+    border-left-color: var(--color-green-500);
+  }
+
   .border-l-green-600 {
     border-left-color: var(--color-green-600);
   }

@@ -1,11 +1,14 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+// Helper function to add delay between emails (avoid Resend rate limit)
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const resendApiKey = Deno.env.get('RESEND_API_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// This function runs every 30 minutes via cron
+// This function runs every 30 minutes via cron (updated 2025-12-10)
 Deno.serve(async (req) => {
   // Allow cron jobs to invoke this function
   // Cron jobs come from Supabase's internal network
@@ -25,7 +28,7 @@ Deno.serve(async (req) => {
     // 1. Get all unread messages
     const { data: unreadMessages, error: messagesError } = await supabase
       .from('messages')
-      .select('id, conversation_id, sender_id, receiver_id, created_at')
+      .select('id, conversation_id, sender_id, recipient_id, created_at')
       .eq('is_read', false)
       .order('created_at', { ascending: true });
     
@@ -66,9 +69,9 @@ Deno.serve(async (req) => {
     // 3. Group by receiver
     const messagesByReceiver = new Map<string, typeof newUnreadMessages>();
     for (const message of newUnreadMessages) {
-      const existing = messagesByReceiver.get(message.receiver_id) || [];
+      const existing = messagesByReceiver.get(message.recipient_id) || [];
       existing.push(message);
-      messagesByReceiver.set(message.receiver_id, existing);
+      messagesByReceiver.set(message.recipient_id, existing);
     }
     
     console.log(`Grouped messages for ${messagesByReceiver.size} receivers`);
@@ -125,7 +128,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: 'OnPlasy <noreply@onplasy.com>',
             to: [profile.email],
-            subject: 'You have new messages on OnPlasy',
+            subject: 'You have new messages OnPlasy',
             html: `
               <!DOCTYPE html>
               <html>
@@ -165,6 +168,9 @@ Deno.serve(async (req) => {
         
         console.log(`Email sent to ${profile.email}`);
         emailsSent++;
+        
+        // Add 700ms delay to avoid Resend rate limit (2 emails per second max)
+        await sleep(700);
         
         // Mark messages as notified
         for (const message of userMessages) {
