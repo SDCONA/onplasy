@@ -2069,6 +2069,59 @@ app.post('/make-server-5dec7914/upload-image', async (c) => {
         throw new Error('Unsupported image type for compression');
       }
       
+      // Handle EXIF orientation for JPEG images to prevent rotation issues
+      if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+        try {
+          const view = new DataView(arrayBuffer);
+          let offset = 2;
+          
+          while (offset < view.byteLength) {
+            if (view.getUint8(offset) !== 0xFF) break;
+            
+            const marker = view.getUint8(offset + 1);
+            if (marker === 0xE1) {
+              const exifLength = view.getUint16(offset + 2);
+              const exifStart = offset + 4;
+              
+              if (view.getUint32(exifStart) === 0x45786966) {
+                const tiffOffset = exifStart + 6;
+                const littleEndian = view.getUint16(tiffOffset) === 0x4949;
+                
+                const ifdOffset = tiffOffset + view.getUint32(tiffOffset + 4, littleEndian);
+                const numEntries = view.getUint16(ifdOffset, littleEndian);
+                
+                for (let i = 0; i < numEntries; i++) {
+                  const entryOffset = ifdOffset + 2 + (i * 12);
+                  const tag = view.getUint16(entryOffset, littleEndian);
+                  
+                  if (tag === 0x0112) {
+                    const orientation = view.getUint16(entryOffset + 8, littleEndian);
+                    console.log(`EXIF orientation detected: ${orientation}`);
+                    
+                    if (orientation === 3) {
+                      image = image.rotate(180);
+                      console.log('Applied 180° rotation');
+                    } else if (orientation === 6) {
+                      image = image.rotate(90);
+                      console.log('Applied 90° clockwise rotation');
+                    } else if (orientation === 8) {
+                      image = image.rotate(270);
+                      console.log('Applied 90° counter-clockwise rotation');
+                    }
+                    break;
+                  }
+                }
+              }
+              break;
+            }
+            
+            offset += 2 + view.getUint16(offset + 2);
+          }
+        } catch (exifError) {
+          console.log('Could not read EXIF data, skipping orientation correction:', exifError);
+        }
+      }
+      
       // Determine target size based on image type
       // Avatars: 200x200 (displayed at 36x36 to ~100x100)
       // Listings: 800px max width/height (displayed in cards and detail view)
