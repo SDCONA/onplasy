@@ -2124,8 +2124,8 @@ app.post('/make-server-5dec7914/upload-image', async (c) => {
       
       // Determine target size based on image type
       // Avatars: 200x200 (displayed at 36x36 to ~100x100)
-      // Listings: 800px max width/height (displayed in cards and detail view)
-      const targetSize = imageType === 'avatar' ? 200 : 800;
+      // Listings: 1200px max width/height (client already resizes, server validates)
+      const targetSize = imageType === 'avatar' ? 200 : 1200;
       
       // Maintain aspect ratio for listings, force square for avatars
       let resized;
@@ -2137,14 +2137,17 @@ app.post('/make-server-5dec7914/upload-image', async (c) => {
         const height = image.height;
         const maxDimension = Math.max(width, height);
         
+        // Only resize if image exceeds target size (client should have already processed it)
         if (maxDimension > targetSize) {
           const scale = targetSize / maxDimension;
           const newWidth = Math.round(width * scale);
           const newHeight = Math.round(height * scale);
           resized = image.resize(newWidth, newHeight);
+          console.log(`Server resizing from ${width}x${height} to ${newWidth}x${newHeight}`);
         } else {
-          // Image is already small enough
+          // Image is already optimized by client, just use it
           resized = image;
+          console.log(`Image already optimized (${width}x${height}), skipping server resize`);
         }
       }
       

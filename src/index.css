@@ -984,6 +984,10 @@
     touch-action: var(--tw-pan-x, ) var(--tw-pan-y, ) var(--tw-pinch-zoom, );
   }
 
+  .resize {
+    resize: both;
+  }
+
   .resize-none {
     resize: none;
   }

@@ -4,6 +4,7 @@ import { ArrowLeft, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import SearchableSelect from '../components/SearchableSelect';
+import { processImage, formatBytes, getSizeReduction } from '../utils/imageProcessing';
 
 interface CreateListingPageProps {
   user: any;
@@ -96,8 +97,18 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
 
       for (let i = 0; i < files.length && images.length + i < 10; i++) {
         const file = files[i];
+        
+        // Process image on client side: resize, strip metadata, compress
+        console.log(`Original image: ${formatBytes(file.size)}`);
+        const processedFile = await processImage(file, {
+          maxWidth: 1200,
+          maxHeight: 1200,
+          quality: 0.92
+        });
+        console.log(`Processed image: ${formatBytes(processedFile.size)} (${getSizeReduction(file.size, processedFile.size)} reduction)`);
+        
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', processedFile);
 
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/upload-image`,
