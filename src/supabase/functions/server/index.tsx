@@ -2102,11 +2102,11 @@ app.post('/make-server-5dec7914/upload-image', async (c) => {
                       image = image.rotate(180);
                       console.log('Applied 180° rotation');
                     } else if (orientation === 6) {
-                      image = image.rotate(90);
-                      console.log('Applied 90° clockwise rotation');
-                    } else if (orientation === 8) {
                       image = image.rotate(270);
-                      console.log('Applied 90° counter-clockwise rotation');
+                      console.log('Applied 270° rotation (90° counter-clockwise)');
+                    } else if (orientation === 8) {
+                      image = image.rotate(90);
+                      console.log('Applied 90° rotation (90° clockwise)');
                     }
                     break;
                   }
@@ -2148,8 +2148,8 @@ app.post('/make-server-5dec7914/upload-image', async (c) => {
         }
       }
       
-      // Encode as JPEG with 85% quality for optimal size/quality balance
-      const encoded = await resized.encodeJPEG(85);
+      // Encode as JPEG with 92% quality for better image quality
+      const encoded = await resized.encodeJPEG(92);
       finalBuffer = encoded.buffer;
       contentType = 'image/jpeg';
       

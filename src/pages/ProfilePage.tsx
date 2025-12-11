@@ -188,7 +188,7 @@ export default function ProfilePage({ currentUser }: ProfilePageProps) {
                   <Link 
                     to="/my-listings"
                     state={{ from: 'profile' }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                   >
                     <FileText className="w-4 h-4" />
                     <span>My Listings</span>

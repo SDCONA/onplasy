@@ -511,8 +511,25 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
                 <p className="text-blue-600 mt-2">Uploading images...</p>
               )}
 
-              {images.length > 0 && (
+              {(images.length > 0 || uploadingImage) && (
                 <div className="grid grid-cols-4 gap-2 mt-3">
+                  {/* Show skeleton loaders while uploading */}
+                  {uploadingImage && (
+                    <>
+                      {[...Array(Math.min(4, 10 - images.length))].map((_, index) => (
+                        <div 
+                          key={`skeleton-${index}`} 
+                          className="relative aspect-square bg-gray-200 rounded-lg overflow-hidden animate-pulse"
+                        >
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  
+                  {/* Show uploaded images */}
                   {images.slice(0, 4).map((img, index) => (
                     <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
                       <img 

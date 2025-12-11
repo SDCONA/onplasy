@@ -669,6 +669,22 @@ export default function EditListingPage({ user }: EditListingPageProps) {
                   ))}
                 </div>
               )}
+
+              {/* Show skeleton loaders while uploading */}
+              {uploadingImage && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {[...Array(Math.min(4, 10 - images.length))].map((_, index) => (
+                    <div 
+                      key={`skeleton-${index}`} 
+                      className="relative h-32 bg-gray-200 rounded-lg overflow-hidden animate-pulse"
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
