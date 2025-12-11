@@ -34,6 +34,11 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
 
   const currentView = viewStack[viewStack.length - 1];
 
+  // Get direct image URL (single URL system)
+  const getImageUrl = (image: any) => {
+    return image;  // Simply return the URL string
+  };
+
   useEffect(() => {
     if (currentView.type === 'listing') {
       fetchListing();
@@ -298,7 +303,7 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
                   <div className="aspect-square">
                     {listing.images && listing.images.length > 0 ? (
                       <ImageWithFallback
-                        src={listing.images[selectedImage]}
+                        src={getImageUrl(listing.images[selectedImage])}
                         alt={listing.title}
                         className="w-full h-full object-contain hover:opacity-90 transition-opacity"
                       />
@@ -312,18 +317,21 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
 
                 {listing.images && listing.images.length > 1 && (
                   <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
-                    {listing.images.map((image: string, index: number) => (
+                    {listing.images.map((image: any, index: number) => (
                       <button
                         key={index}
-                        onClick={() => setSelectedImage(index)}
-                        className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden ${
-                          selectedImage === index ? 'ring-2 ring-blue-600' : ''
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedImage(index);
+                        }}
+                        className={`w-16 h-16 rounded-lg overflow-hidden ${
+                          selectedImage === index ? 'ring-2 ring-white' : 'opacity-60 hover:opacity-100'
                         }`}
                       >
                         <ImageWithFallback
-                          src={image}
+                          src={getImageUrl(image)}
                           alt={`${listing.title} ${index + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain bg-gray-100"
                         />
                       </button>
                     ))}
@@ -571,9 +579,9 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
                           <div className="aspect-square">
                             {listing.images && listing.images.length > 0 ? (
                               <ImageWithFallback
-                                src={listing.images[0]}
+                                src={getImageUrl(listing.images[0])}
                                 alt={listing.title}
-                                className="w-full h-full object-contain"
+                                className="w-full h-full object-contain bg-gray-100"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
@@ -658,34 +666,11 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
 
           <div className="max-w-7xl max-h-full w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
             <ImageWithFallback
-              src={listing.images[selectedImage]}
+              src={getImageUrl(listing.images[selectedImage])}
               alt={listing.title}
               className="max-w-full max-h-full object-contain"
             />
           </div>
-
-          {listing.images.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 bg-black bg-opacity-50 p-3 rounded-lg">
-              {listing.images.map((image: string, index: number) => (
-                <button
-                  key={index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedImage(index);
-                  }}
-                  className={`w-16 h-16 rounded-lg overflow-hidden ${
-                    selectedImage === index ? 'ring-2 ring-white' : 'opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  <ImageWithFallback
-                    src={image}
-                    alt={`${listing.title} ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
 

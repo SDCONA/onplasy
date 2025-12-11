@@ -21,6 +21,21 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  // Helper functions to get correct image URLs
+  const getMediumUrl = (image: any) => {
+    if (typeof image === 'object' && image.medium) {
+      return image.medium;
+    }
+    return image;
+  };
+
+  const getThumbnailUrl = (image: any) => {
+    if (typeof image === 'object' && image.thumbnail) {
+      return image.thumbnail;
+    }
+    return image;
+  };
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [lastTouchDistance, setLastTouchDistance] = useState(0);
@@ -136,7 +151,7 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
               <div className="aspect-square bg-gray-200">
                 {listing.images && listing.images.length > 0 ? (
                   <ImageWithFallback
-                    src={listing.images[selectedImage]}
+                    src={getMediumUrl(listing.images[selectedImage])}
                     alt={listing.title}
                     className="w-full h-full object-contain bg-gray-100"
                   />
@@ -150,7 +165,7 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
 
             {listing.images && listing.images.length > 1 && (
               <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
-                {listing.images.map((image: string, index: number) => (
+                {listing.images.map((image: any, index: number) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
@@ -159,7 +174,7 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
                     }`}
                   >
                     <ImageWithFallback
-                      src={image}
+                      src={getThumbnailUrl(image)}
                       alt={`${listing.title} ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -488,7 +503,7 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
           >
             <div className="min-h-full flex items-center justify-center p-4">
               <ImageWithFallback
-                src={listing.images[selectedImage]}
+                src={getMediumUrl(listing.images[selectedImage])}
                 alt={listing.title}
                 className="max-w-full max-h-full object-contain"
                 style={{
@@ -504,7 +519,7 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
           {listing.images.length > 1 && (
             <div className="p-4 bg-black bg-opacity-50">
               <div className="flex gap-2 overflow-x-auto pb-2 justify-center [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
-                {listing.images.map((image: string, index: number) => (
+                {listing.images.map((image: any, index: number) => (
                   <button
                     key={index}
                     onClick={(e) => {
@@ -518,7 +533,7 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
                     }`}
                   >
                     <ImageWithFallback
-                      src={image}
+                      src={getThumbnailUrl(image)}
                       alt={`${listing.title} ${index + 1}`}
                       className="w-full h-full object-cover"
                     />

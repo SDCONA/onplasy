@@ -196,6 +196,8 @@ export default function EditListingPage({ user }: EditListingPageProps) {
 
         const data = await response.json();
         
+        console.log('Upload response:', data);
+        
         if (response.ok && data.url) {
           setImages(prev => [...prev, data.url]);
         } else {
@@ -647,7 +649,7 @@ export default function EditListingPage({ user }: EditListingPageProps) {
                       <img
                         src={img}
                         alt={`Upload ${index + 1}`}
-                        className="w-full h-32 object-contain bg-gray-100 rounded-lg"
+                        className="h-32 object-contain bg-gray-100 rounded-lg mx-auto"
                       />
                       {index === 3 && images.length > 4 && (
                         <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center pointer-events-none">
@@ -659,7 +661,7 @@ export default function EditListingPage({ user }: EditListingPageProps) {
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 opacity-0 group-hover:opacity-100 transition z-10"
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition z-10"
                       >
                         <X className="w-4 h-4" />
                       </button>

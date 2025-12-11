@@ -101,8 +101,13 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
 
   const getImageUrl = (listing: any) => {
     if (listing.images && listing.images.length > 0) {
-      return listing.images[0];
+      const firstImage = listing.images[0];
+      console.log('[ListingCard] Image data:', { listingId: listing.id, images: listing.images, firstImage });
+      // Simply return the first image URL
+      console.log('[ListingCard] Using URL:', firstImage);
+      return firstImage;
     }
+    console.log('[ListingCard] No images found for listing:', listing.id);
     return null;
   };
 
@@ -115,7 +120,7 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
         <div className="relative aspect-square bg-gray-200">
           {getImageUrl(listing) ? (
             <ImageWithFallback
-              src={getImageUrl(listing)}
+              src={getImageUrl(listing) || ''}
               alt={listing.title}
               className="w-full h-full object-cover bg-gray-100"
             />

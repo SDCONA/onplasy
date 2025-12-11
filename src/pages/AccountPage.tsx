@@ -5,6 +5,7 @@ import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { toast } from 'sonner@2.0.3';
+import ImageCropperModal from '../components/ImageCropperModal';
 
 interface AccountPageProps {
   user: any;
@@ -39,6 +40,10 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState<'success' | 'error'>('success');
+
+  // Image cropper modal state
+  const [showCropper, setShowCropper] = useState(false);
+  const [tempImageUrl, setTempImageUrl] = useState('');
 
   // Password strength requirements
   const passwordRequirements = {
@@ -202,7 +207,16 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       return;
     }
 
+    // Create temporary URL for cropper
+    const imageUrl = URL.createObjectURL(file);
+    setTempImageUrl(imageUrl);
+    setShowCropper(true);
+  };
+
+  const handleCroppedImageSave = async (croppedBlob: Blob) => {
     setUploading(true);
+    setShowCropper(false);
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -211,7 +225,7 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       }
 
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', croppedBlob, 'avatar.jpg');
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/upload-image?type=avatar`,
@@ -238,6 +252,20 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       toast.error('Failed to upload avatar');
     } finally {
       setUploading(false);
+      // Clean up temporary URL
+      if (tempImageUrl) {
+        URL.revokeObjectURL(tempImageUrl);
+        setTempImageUrl('');
+      }
+    }
+  };
+
+  const handleCropperCancel = () => {
+    setShowCropper(false);
+    // Clean up temporary URL
+    if (tempImageUrl) {
+      URL.revokeObjectURL(tempImageUrl);
+      setTempImageUrl('');
     }
   };
 
@@ -764,6 +792,15 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Image Cropper Modal */}
+      {showCropper && tempImageUrl && (
+        <ImageCropperModal
+          imageUrl={tempImageUrl}
+          onSave={handleCroppedImageSave}
+          onCancel={handleCropperCancel}
+        />
       )}
     </div>
   );

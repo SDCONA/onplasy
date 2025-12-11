@@ -117,7 +117,10 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
           continue;
         }
 
-        setImages(prev => [...prev, data.url]);
+        // Server returns single URL for listing images
+        if (data.url) {
+          setImages(prev => [...prev, data.url]);
+        }
       }
     } catch (err) {
       console.error('Upload error:', err);
@@ -512,7 +515,11 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
                 <div className="grid grid-cols-4 gap-2 mt-3">
                   {images.slice(0, 4).map((img, index) => (
                     <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                      <img src={img} alt={`Preview ${index + 1}`} className="w-full h-full object-contain bg-gray-100" />
+                      <img 
+                        src={img} 
+                        alt={`Preview ${index + 1}`} 
+                        className="w-full h-full object-contain" 
+                      />
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
