@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Heart, MessageSquare, User, LogOut, FileText, Shield, Settings, ShieldCheck, DollarSign } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useTranslation } from '../translations';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface HeaderProps {
   user: any;
@@ -14,6 +16,7 @@ export default function Header({ user, unreadCount = 0, offersCount = 0 }: Heade
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Check if user is admin
   const isAdmin = user?.is_admin === true;
@@ -102,10 +105,10 @@ export default function Header({ user, unreadCount = 0, offersCount = 0 }: Heade
           </nav>
 
           {/* Mobile Menu Button */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {/* Mobile Quick Links */}
             {user && (
-              <div className="md:hidden flex items-center gap-3">
+              <div className="md:hidden flex items-center gap-1.5">
                 <Link to="/messages" className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
                   <MessageSquare className="w-6 h-6" strokeWidth={2.5} />
                   {unreadCount > 0 && (
@@ -181,6 +184,12 @@ export default function Header({ user, unreadCount = 0, offersCount = 0 }: Heade
                     <span>Privacy Policy</span>
                   </Link>
                 </div>
+                <div className="border-b border-gray-200 pb-3 mb-3">
+                  <p className="text-gray-500 mb-2 px-2">Language</p>
+                  <div className="px-2">
+                    <LanguageSwitcher />
+                  </div>
+                </div>
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-2 text-gray-700 hover:text-blue-600 text-left px-2"
@@ -205,6 +214,12 @@ export default function Header({ user, unreadCount = 0, offersCount = 0 }: Heade
                     <Shield className="w-5 h-5" />
                     <span>Privacy Policy</span>
                   </Link>
+                </div>
+                <div className="border-t border-gray-200 pt-3 mt-3">
+                  <p className="text-gray-500 mb-2 px-2">Language</p>
+                  <div className="px-2">
+                    <LanguageSwitcher />
+                  </div>
                 </div>
               </>
             )}

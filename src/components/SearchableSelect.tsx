@@ -4,6 +4,7 @@ import { ChevronDown, Search, X } from 'lucide-react';
 interface Option {
   id: string;
   name: string;
+  slug?: string;
 }
 
 interface SearchableSelectProps {
@@ -12,6 +13,7 @@ interface SearchableSelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
+  getDisplayName?: (option: Option) => string;
 }
 
 export default function SearchableSelect({
@@ -19,7 +21,8 @@ export default function SearchableSelect({
   value,
   onChange,
   placeholder = 'Select...',
-  required = false
+  required = false,
+  getDisplayName
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,7 +72,7 @@ export default function SearchableSelect({
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex items-center justify-between"
       >
         <span className={selectedOption ? 'text-gray-900' : 'text-gray-400'}>
-          {selectedOption ? selectedOption.name : placeholder}
+          {selectedOption ? (getDisplayName ? getDisplayName(selectedOption) : selectedOption.name) : placeholder}
         </span>
         <div className="flex items-center gap-1">
           {value && (
@@ -111,7 +114,7 @@ export default function SearchableSelect({
                     option.id === value ? 'bg-blue-100 text-blue-600' : 'text-gray-900'
                   }`}
                 >
-                  {option.name}
+                  {getDisplayName ? getDisplayName(option) : option.name}
                 </button>
               ))
             ) : (

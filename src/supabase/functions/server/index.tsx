@@ -2275,7 +2275,8 @@ app.post('/make-server-5dec7914/offers', async (c) => {
         message: message || null,
         status: 'pending',
         round: 1,
-        expires_at: expiresAt
+        expires_at: expiresAt,
+        is_read: false
       })
       .select()
       .single();
@@ -2369,7 +2370,7 @@ app.get('/make-server-5dec7914/offers/count', async (c) => {
       .from('offers')
       .select('*', { count: 'exact', head: true })
       .eq('seller_id', user.id)
-      .in('status', ['pending', 'countered']);
+      .eq('is_read', false);
     
     if (error) {
       console.error('Count offers error:', error);
@@ -2538,6 +2539,53 @@ app.put('/make-server-5dec7914/offers/:id/decline', async (c) => {
   }
 });
 
+// Delete offer endpoint - allows buyer to delete their pending offer
+app.delete('/make-server-5dec7914/offers/:id', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const offerId = c.req.param('id');
+    
+    // Get offer
+    const { data: offer, error: offerError } = await supabase
+      .from('offers')
+      .select('*')
+      .eq('id', offerId)
+      .single();
+    
+    if (offerError || !offer) {
+      return c.json({ error: 'Offer not found' }, 404);
+    }
+    
+    // Verify user is the buyer (only buyers can delete their own offers)
+    if (offer.buyer_id !== user.id) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
+    
+    // Only allow deletion of pending offers
+    if (offer.status !== 'pending') {
+      return c.json({ error: 'Only pending offers can be deleted' }, 400);
+    }
+    
+    // Delete the offer
+    const { error: deleteError } = await supabase
+      .from('offers')
+      .delete()
+      .eq('id', offerId);
+    
+    if (deleteError) {
+      console.error('Delete offer error:', deleteError);
+      return c.json({ error: deleteError.message }, 400);
+    }
+    
+    return c.json({ message: 'Offer deleted successfully' });
+  } catch (error) {
+    console.error('Delete offer exception:', error);
+    return c.json({ error: 'Failed to delete offer' }, 500);
+  }
+});
+
 app.put('/make-server-5dec7914/offers/:id/counter', async (c) => {
   try {
     const user = await getAuthUser(c.req.raw);
@@ -2598,7 +2646,8 @@ app.put('/make-server-5dec7914/offers/:id/counter', async (c) => {
         counter_amount,
         status: 'countered',
         round: offer.round + 1,
-        expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString() // Reset expiration
+        expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // Reset expiration
+        is_read: false // Mark as unread for the recipient
       })
       .eq('id', offerId)
       .select()
@@ -2619,6 +2668,33 @@ app.put('/make-server-5dec7914/offers/:id/counter', async (c) => {
   } catch (error) {
     console.error('Counter offer exception:', error);
     return c.json({ error: 'Failed to counter offer' }, 500);
+  }
+});
+
+// Mark offers as read for a specific listing
+app.put('/make-server-5dec7914/offers/mark-read/:listingId', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const listingId = c.req.param('listingId');
+    
+    // Mark all offers for this listing as read (where user is the seller)
+    const { error } = await supabase
+      .from('offers')
+      .update({ is_read: true })
+      .eq('listing_id', listingId)
+      .eq('seller_id', user.id);
+    
+    if (error) {
+      console.error('Mark offers as read error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+    
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Mark offers as read exception:', error);
+    return c.json({ error: 'Failed to mark offers as read' }, 500);
   }
 });
 

@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom';
 import { Clock, X, Check, ArrowRightLeft } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import ConfirmModal from './ConfirmModal';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  `https://${projectId}.supabase.co`,
+  publicAnonKey
+);
 
 interface OfferCardProps {
   offer: any;
@@ -16,6 +23,7 @@ export default function OfferCard({ offer, user, type, onUpdate }: OfferCardProp
   const [showCounterInput, setShowCounterInput] = useState(false);
   const [counterAmount, setCounterAmount] = useState('');
   const [error, setError] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -109,6 +117,38 @@ export default function OfferCard({ offer, user, type, onUpdate }: OfferCardProp
     } catch (err) {
       console.error(`${action} offer error:`, err);
       setError(`Failed to ${action} offer. Please try again.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/offers/${offer.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to delete offer');
+        return;
+      }
+
+      onUpdate();
+    } catch (err) {
+      console.error('Delete offer error:', err);
+      setError('Failed to delete offer. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -303,6 +343,17 @@ export default function OfferCard({ offer, user, type, onUpdate }: OfferCardProp
             </div>
           )}
 
+          {type === 'sent' && offer.status === 'pending' && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm"
+            >
+              <X className="w-4 h-4" />
+              Cancel and Delete
+            </button>
+          )}
+
           {showCounterInput && (
             <button
               onClick={() => {
@@ -331,7 +382,7 @@ export default function OfferCard({ offer, user, type, onUpdate }: OfferCardProp
           {/* Only sellers can cancel accepted offers */}
           {type === 'received' && (
             <button
-              onClick={handleDecline}
+              onClick={() => handleAction('decline')}
               className="w-full px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
             >
               Cancel Accepted Offer
@@ -339,6 +390,17 @@ export default function OfferCard({ offer, user, type, onUpdate }: OfferCardProp
           )}
         </div>
       )}
+
+      {/* Delete Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="Cancel and Delete Offer"
+        message="Are you sure you want to cancel and delete this offer?"
+        confirmText="Cancel and Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

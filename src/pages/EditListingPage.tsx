@@ -3,8 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, X, Upload } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
-import SearchableSelect from '../components/SearchableSelect';
 import { processImage, formatBytes, getSizeReduction } from '../utils/imageProcessing';
+import { useTranslation, nameToSlug } from '../translations';
 
 interface EditListingPageProps {
   user: any;
@@ -13,6 +13,7 @@ interface EditListingPageProps {
 export default function EditListingPage({ user }: EditListingPageProps) {
   const { id: listingId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   console.log('=== EditListingPage RENDERED ===');
   console.log('listingId from URL:', listingId);
@@ -344,7 +345,7 @@ export default function EditListingPage({ user }: EditListingPageProps) {
             >
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
-                  {category.name}
+                  {t.categories[category.slug as keyof typeof t.categories] || category.name}
                 </option>
               ))}
             </select>
@@ -376,7 +377,7 @@ export default function EditListingPage({ user }: EditListingPageProps) {
                   <option value="">Select a subcategory</option>
                   {subcategories.map((subcategory: any) => (
                     <option key={subcategory.id} value={subcategory.id}>
-                      {subcategory.name}
+                      {t.categories[subcategory.slug as keyof typeof t.categories] || subcategory.name}
                     </option>
                   ))}
                 </select>

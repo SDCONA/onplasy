@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, MapPin, SlidersHorizontal, Plus } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Filter, X, ChevronDown, ChevronUp, MapPin, Search, SlidersHorizontal, Plus } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { supabase } from '../utils/supabase/client';
 import ListingCard from '../components/ListingCard';
-import { useNavigate } from 'react-router-dom';
+import { useTranslation, nameToSlug } from '../translations';
 
 interface HomePageProps {
   user: any;
@@ -28,9 +30,19 @@ export default function HomePage({ user }: HomePageProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  // Scroll restoration
+  const location = useLocation();
+  const previousPathRef = useRef(location.pathname);
+
+  // Helper function to get translated category name
+  const getCategoryName = (categorySlug: string) => {
+    return t.categories[categorySlug as keyof typeof t.categories] || categorySlug;
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -60,8 +72,15 @@ export default function HomePage({ user }: HomePageProps) {
       );
       const data = await response.json();
       if (data.categories) {
-        // Sort categories by sort_order field
-        const sortedCategories = data.categories.sort((a: any, b: any) => {
+        // Sort categories by sort_order field and add slug from name
+        const sortedCategories = data.categories.map((cat: any) => ({
+          ...cat,
+          slug: cat.slug || nameToSlug(cat.name),
+          subcategories: cat.subcategories?.map((sub: any) => ({
+            ...sub,
+            slug: sub.slug || nameToSlug(sub.name)
+          })) || []
+        })).sort((a: any, b: any) => {
           return (a.sort_order || 999) - (b.sort_order || 999);
         });
         setCategories(sortedCategories);
@@ -171,7 +190,7 @@ export default function HomePage({ user }: HomePageProps) {
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search for products..."
+              placeholder={t.header.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -185,7 +204,7 @@ export default function HomePage({ user }: HomePageProps) {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <SlidersHorizontal className="w-4 h-4" />
-              <span>{showFilters ? 'Hide Filters' : 'Show Filters'}</span>
+              <span>{showFilters ? t.home.hideFilters : t.home.showFilters}</span>
             </button>
             
             <div className="flex gap-2 ml-auto">
@@ -194,7 +213,7 @@ export default function HomePage({ user }: HomePageProps) {
                   onClick={() => navigate('/auth')}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  <span>Login / Sign Up</span>
+                  <span>{t.home.loginSignup}</span>
                 </button>
               )}
               
@@ -204,7 +223,7 @@ export default function HomePage({ user }: HomePageProps) {
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Create Listing</span>
+                  <span>{t.header.createListing}</span>
                 </button>
               )}
             </div>
@@ -215,17 +234,17 @@ export default function HomePage({ user }: HomePageProps) {
             <div className="mt-4 space-y-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
               {/* Sort By */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">Sort By</label>
+                <label className="block text-sm text-gray-700 mb-2">{t.home.sortBy}</label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
-                  <option value="random">Random</option>
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="price_low">Price: Low to High</option>
-                  <option value="price_high">Price: High to Low</option>
+                  <option value="random">{t.sorting.random}</option>
+                  <option value="newest">{t.sorting.newest}</option>
+                  <option value="oldest">{t.sorting.oldest}</option>
+                  <option value="price_low">{t.sorting.priceAsc}</option>
+                  <option value="price_high">{t.sorting.priceDesc}</option>
                 </select>
               </div>
 
@@ -233,17 +252,17 @@ export default function HomePage({ user }: HomePageProps) {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin className="w-5 h-5 text-blue-600" />
-                  <span className="text-gray-700">Search by Location</span>
+                  <span className="text-gray-700">{t.home.searchByLocation}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4">
                   {/* Zipcode Input */}
                   <div className="flex-1">
                     <label className="block text-sm text-gray-600 mb-1">
-                      Zipcode
+                      {t.home.zipcode}
                     </label>
                     <input
                       type="text"
-                      placeholder="Enter zipcode..."
+                      placeholder={t.home.enterZipcode}
                       value={zipcode}
                       onChange={(e) => setZipcode(e.target.value.replace(/[^0-9]/g, '').slice(0, 5))}
                       maxLength={5}
@@ -254,7 +273,7 @@ export default function HomePage({ user }: HomePageProps) {
                   {/* Distance Slider */}
                   <div className="flex-1">
                     <label className="block text-sm text-gray-600 mb-1">
-                      Distance: {distance} mile{distance !== 1 ? 's' : ''}
+                      {t.home.distance}: {distance} {distance !== 1 ? t.home.miles : t.home.mile}
                     </label>
                     <div className="flex items-center gap-3">
                       <input
@@ -281,7 +300,7 @@ export default function HomePage({ user }: HomePageProps) {
                         }}
                         className="px-4 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg whitespace-nowrap"
                       >
-                        Clear
+                        {t.home.clear}
                       </button>
                     </div>
                   )}
@@ -290,18 +309,18 @@ export default function HomePage({ user }: HomePageProps) {
 
               {/* Price Range */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">Price Range</label>
+                <label className="block text-sm text-gray-700 mb-2">{t.home.priceRange}</label>
                 <div className="flex gap-4">
                   <input
                     type="text"
-                    placeholder="Min Price"
+                    placeholder={t.home.minPrice}
                     value={minPrice}
                     onChange={(e) => setMinPrice(e.target.value.replace(/[^0-9]/g, ''))}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input
                     type="text"
-                    placeholder="Max Price"
+                    placeholder={t.home.maxPrice}
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(e.target.value.replace(/[^0-9]/g, ''))}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -311,33 +330,33 @@ export default function HomePage({ user }: HomePageProps) {
 
               {/* Condition */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">Condition</label>
+                <label className="block text-sm text-gray-700 mb-2">{t.home.condition}</label>
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
-                  <option value="all">All</option>
-                  <option value="new">New</option>
-                  <option value="like-new">Like New</option>
-                  <option value="good">Good</option>
-                  <option value="fair">Fair</option>
-                  <option value="poor">Poor</option>
+                  <option value="all">{t.home.all}</option>
+                  <option value="new">{t.home.new}</option>
+                  <option value="like-new">{t.home.likeNew}</option>
+                  <option value="good">{t.home.good}</option>
+                  <option value="fair">{t.home.fair}</option>
+                  <option value="poor">{t.home.poor}</option>
                 </select>
               </div>
 
               {/* Date Posted */}
               <div>
-                <label className="block text-sm text-gray-700 mb-2">Date Posted</label>
+                <label className="block text-sm text-gray-700 mb-2">{t.home.datePosted}</label>
                 <select
                   value={datePosted}
                   onChange={(e) => setDatePosted(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
-                  <option value="all">All Time</option>
-                  <option value="24h">Last 24 Hours</option>
-                  <option value="week">Last 7 Days</option>
-                  <option value="month">Last 30 Days</option>
+                  <option value="all">{t.home.allTime}</option>
+                  <option value="24h">{t.home.last24Hours}</option>
+                  <option value="week">{t.home.last7Days}</option>
+                  <option value="month">{t.home.last30Days}</option>
                 </select>
               </div>
             </div>
@@ -357,7 +376,7 @@ export default function HomePage({ user }: HomePageProps) {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              All
+              {t.home.all}
             </button>
             {(() => {
               // Priority categories in specific order
@@ -385,7 +404,7 @@ export default function HomePage({ user }: HomePageProps) {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {category.name}
+                  {getCategoryName(category.slug)}
                 </button>
               ));
             })()}
@@ -406,7 +425,7 @@ export default function HomePage({ user }: HomePageProps) {
                     : 'bg-white text-gray-700 hover:bg-blue-100'
                 }`}
               >
-                All {selectedCategoryObj?.name}
+                {t.home.allCategories} {getCategoryName(selectedCategoryObj?.slug || '')}
               </button>
               {subcategories.map((subcategory: any) => (
                 <button
@@ -418,7 +437,7 @@ export default function HomePage({ user }: HomePageProps) {
                       : 'bg-white text-gray-700 hover:bg-blue-100'
                   }`}
                 >
-                  {subcategory.name}
+                  {getCategoryName(subcategory.slug)}
                 </button>
               ))}
             </div>
@@ -431,7 +450,7 @@ export default function HomePage({ user }: HomePageProps) {
         <div className="bg-green-50 border-b border-green-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div className="flex items-center gap-3">
-              <span className="text-gray-700">Looking to:</span>
+              <span className="text-gray-700">{t.home.lookingTo}</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setListingType('all')}
@@ -441,7 +460,7 @@ export default function HomePage({ user }: HomePageProps) {
                       : 'bg-white text-gray-700 hover:bg-green-100'
                   }`}
                 >
-                  All
+                  {t.home.all}
                 </button>
                 <button
                   onClick={() => setListingType('sale')}
@@ -451,7 +470,7 @@ export default function HomePage({ user }: HomePageProps) {
                       : 'bg-white text-gray-700 hover:bg-green-100'
                   }`}
                 >
-                  Buy
+                  {t.home.buy}
                 </button>
                 <button
                   onClick={() => setListingType('rent')}
@@ -461,7 +480,7 @@ export default function HomePage({ user }: HomePageProps) {
                       : 'bg-white text-gray-700 hover:bg-green-100'
                   }`}
                 >
-                  Rent
+                  {t.home.rent}
                 </button>
               </div>
             </div>
@@ -474,7 +493,7 @@ export default function HomePage({ user }: HomePageProps) {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-gray-600 ml-4">
-            {listings.length} {listings.length === 1 ? 'listing' : 'listings'} found
+            {listings.length} {listings.length === 1 ? t.home.listingFound : t.home.listingsFound}
           </p>
         </div>
 
@@ -484,7 +503,7 @@ export default function HomePage({ user }: HomePageProps) {
           </div>
         ) : listings.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-gray-500">No listings found</p>
+            <p className="text-gray-500">{t.home.noListingsFound}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">

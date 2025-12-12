@@ -4,9 +4,11 @@ import { executeRecaptcha } from '../utils/recaptcha';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
+import { useTranslation } from '../translations';
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -14,6 +16,7 @@ export default function AuthPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [agreedToPolicy, setAgreedToPolicy] = useState(false);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -73,6 +76,7 @@ export default function AuthPage() {
       setEmail('');
       setPassword('');
       setName('');
+      setAgreedToPolicy(false);
       setIsLogin(true);
       setIsForgotPassword(false);
     } catch (err) {
@@ -179,7 +183,7 @@ export default function AuthPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <h1 className="text-center mb-6">
-          {isForgotPassword ? 'Reset Password' : (isLogin ? 'Login to OnPlasy' : 'Create Account')}
+          {isForgotPassword ? t.auth.resetPassword : (isLogin ? t.auth.loginToOnPlasy : t.auth.createAccount)}
         </h1>
 
         {error && (
@@ -191,7 +195,7 @@ export default function AuthPage() {
         {isForgotPassword ? (
           <form onSubmit={handleForgotPassword}>
             <div className="mb-4">
-              <label className="block text-gray-700 mb-2">Email</label>
+              <label className="block text-gray-700 mb-2">{t.auth.email}</label>
               <input
                 type="email"
                 value={email}
@@ -206,7 +210,7 @@ export default function AuthPage() {
               disabled={loading || resetCooldown > 0}
               className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Processing...' : resetCooldown > 0 ? `Wait ${resetCooldown}s` : 'Reset Password'}
+              {loading ? t.auth.processing : resetCooldown > 0 ? `${t.auth.wait} ${resetCooldown}s` : t.auth.resetPassword}
             </button>
 
             <div className="mt-6 text-center">
@@ -218,7 +222,7 @@ export default function AuthPage() {
                 }}
                 className="text-blue-600 hover:underline"
               >
-                Back to Login
+                {t.auth.backToLogin}
               </button>
             </div>
           </form>
@@ -227,7 +231,7 @@ export default function AuthPage() {
             <form onSubmit={isLogin ? handleLogin : handleSignup}>
               {!isLogin && (
                 <div className="mb-4">
-                  <label className="block text-gray-700 mb-2">Name</label>
+                  <label className="block text-gray-700 mb-2">{t.auth.name}</label>
                   <input
                     type="text"
                     value={name}
@@ -239,7 +243,7 @@ export default function AuthPage() {
               )}
 
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Email</label>
+                <label className="block text-gray-700 mb-2">{t.auth.email}</label>
                 <input
                   type="email"
                   value={email}
@@ -250,7 +254,7 @@ export default function AuthPage() {
               </div>
 
               <div className="mb-6">
-                <label className="block text-gray-700 mb-2">Password</label>
+                <label className="block text-gray-700 mb-2">{t.auth.password}</label>
                 <input
                   type="password"
                   value={password}
@@ -264,33 +268,67 @@ export default function AuthPage() {
                 <div className="mb-4">
                   <div className={`flex items-center ${passwordRequirements.minLength ? 'text-green-500' : 'text-red-500'}`}>
                     <Check className="w-4 h-4 mr-2" />
-                    At least 8 characters
+                    {t.auth.atLeast8Chars}
                   </div>
                   <div className={`flex items-center ${passwordRequirements.hasUppercase ? 'text-green-500' : 'text-red-500'}`}>
                     <Check className="w-4 h-4 mr-2" />
-                    At least one uppercase letter
+                    {t.auth.oneUppercase}
                   </div>
                   <div className={`flex items-center ${passwordRequirements.hasLowercase ? 'text-green-500' : 'text-red-500'}`}>
                     <Check className="w-4 h-4 mr-2" />
-                    At least one lowercase letter
+                    {t.auth.oneLowercase}
                   </div>
                   <div className={`flex items-center ${passwordRequirements.hasNumber ? 'text-green-500' : 'text-red-500'}`}>
                     <Check className="w-4 h-4 mr-2" />
-                    At least one number
+                    {t.auth.oneNumber}
                   </div>
                   <div className={`flex items-center ${passwordRequirements.hasSpecial ? 'text-green-500' : 'text-red-500'}`}>
                     <Check className="w-4 h-4 mr-2" />
-                    At least one special character
+                    {t.auth.oneSpecial}
                   </div>
+                </div>
+              )}
+
+              {!isLogin && (
+                <div className="mb-4">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedToPolicy}
+                      onChange={(e) => setAgreedToPolicy(e.target.checked)}
+                      required
+                      className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {t.auth.agreeToTerms}{' '}
+                      <a
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {t.auth.termsOfService}
+                      </a>
+                      {' '}{t.auth.and}{' '}
+                      <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {t.auth.privacyPolicy}
+                      </a>
+                    </span>
+                  </label>
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={loading || (!isLogin && !isPasswordStrong)}
+                disabled={loading || (!isLogin && (!isPasswordStrong || !agreedToPolicy))}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Processing...' : (isLogin ? 'Login' : 'Sign Up')}
+                {loading ? t.auth.processing : (isLogin ? t.auth.loginButton : t.auth.signupButton)}
               </button>
             </form>
 
@@ -302,7 +340,7 @@ export default function AuthPage() {
                 }}
                 className="text-blue-600 hover:underline"
               >
-                {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Login'}
+                {isLogin ? `${t.auth.dontHaveAccount} ${t.auth.signupHere}` : `${t.auth.alreadyHaveAccount} ${t.auth.loginHere}`}
               </button>
             </div>
 
@@ -315,7 +353,7 @@ export default function AuthPage() {
                   }}
                   className="text-blue-600 hover:underline"
                 >
-                  Forgot password?
+                  {t.auth.forgotPassword}
                 </button>
               </div>
             )}

@@ -5,12 +5,14 @@ import { projectId } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { publicAnonKey } from '../utils/supabase/info';
 import ListingCard from '../components/ListingCard';
+import { useTranslation } from '../translations';
 
 interface MyListingsPageProps {
   user: any;
 }
 
 export default function MyListingsPage({ user }: MyListingsPageProps) {
+  const { t } = useTranslation();
   const location = useLocation();
   const [activeListings, setActiveListings] = useState<any[]>([]);
   const [archivedListings, setArchivedListings] = useState<any[]>([]);
@@ -271,11 +273,11 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
     const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
     if (diffDays > 0) {
-      return `${diffDays} day${diffDays !== 1 ? 's' : ''} remaining`;
+      return `${diffDays} ${diffDays !== 1 ? t.myListings.days : t.myListings.day} ${t.myListings.remaining}`;
     } else if (diffHours > 0) {
-      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} remaining`;
+      return `${diffHours} ${diffHours !== 1 ? t.myListings.hours : t.myListings.hour} ${t.myListings.remaining}`;
     } else {
-      return 'Expiring soon';
+      return t.myListings.expiringSoon;
     }
   };
 
@@ -321,21 +323,21 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
           <div className="flex items-center justify-between">
             <Link to={returnPath} className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
               <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
+              <span>{t.myListings.back}</span>
             </Link>
             <Link
               to="/create-listing"
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-5 h-5" />
-              <span>New Listing</span>
+              <span>{t.myListings.newListing}</span>
             </Link>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="mb-6">My Listings</h1>
+        <h1 className="mb-6">{t.myListings.title}</h1>
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
@@ -349,7 +351,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Active ({activeListings.length})
+                {t.myListings.active} ({activeListings.length})
               </button>
               <button
                 onClick={() => setActiveTab('archived')}
@@ -359,7 +361,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Archived ({archivedListings.length})
+                {t.myListings.archived} ({archivedListings.length})
               </button>
             </div>
           </div>
@@ -373,7 +375,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by title, description, category, or price..."
+              placeholder={t.myListings.searchPlaceholder}
               className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
             />
             {searchQuery && (
@@ -394,13 +396,13 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
         ) : activeTab === 'active' ? (
           filteredActiveListings.length === 0 ? (
             <div className="bg-white rounded-lg p-12 text-center">
-              <p className="text-gray-500 mb-4">No active listings</p>
+              <p className="text-gray-500 mb-4">{t.myListings.noActive}</p>
               <Link
                 to="/create-listing"
                 className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
               >
                 <Plus className="w-5 h-5" />
-                <span>Create Your First Listing</span>
+                <span>{t.myListings.createFirst}</span>
               </Link>
             </div>
           ) : (
@@ -411,7 +413,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
                     <ListingCard listing={listing} user={user} />
                     <div className="mt-4 space-y-2">
                       <div className="flex justify-between text-gray-600 mb-2">
-                        <span>{listing.views} views</span>
+                        <span>{listing.views} {t.myListings.views}</span>
                         <span>{getTimeRemaining(listing.expires_at)}</span>
                       </div>
                       <Link
@@ -419,20 +421,20 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
                         className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
                       >
                         <Edit className="w-4 h-4" />
-                        <span>Edit</span>
+                        <span>{t.common.edit}</span>
                       </Link>
                       <Link
                         to={`/listing/${listing.id}`}
                         className="w-full px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 text-center block"
                       >
-                        View Details
+                        {t.myListings.viewDetails}
                       </Link>
                       <button
                         onClick={() => openArchiveModal(listing.id)}
                         className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
                       >
                         <Archive className="w-4 h-4" />
-                        <span>Archive</span>
+                        <span>{t.common.delete}</span>
                       </button>
                     </div>
                   </div>
@@ -449,7 +451,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
         ) : (
           filteredArchivedListings.length === 0 ? (
             <div className="bg-white rounded-lg p-12 text-center">
-              <p className="text-gray-500">No archived listings</p>
+              <p className="text-gray-500">{t.myListings.noArchived}</p>
             </div>
           ) : (
             <>
@@ -459,21 +461,21 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
                     <ListingCard listing={listing} user={user} />
                     <div className="mt-4 space-y-2">
                       <p className="text-gray-600 text-center mb-2">
-                        Archived on {new Date(listing.archived_at).toLocaleDateString()}
+                        {t.myListings.archivedOn} {new Date(listing.archived_at).toLocaleDateString()}
                       </p>
                       <button
                         onClick={() => handleRenew(listing.id)}
                         className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
                       >
                         <RefreshCw className="w-4 h-4" />
-                        <span>Renew for 7 Days</span>
+                        <span>{t.myListings.renewFor7Days}</span>
                       </button>
                       <button
                         onClick={() => openDeleteModal(listing.id)}
                         className="w-full px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 flex items-center justify-center gap-2"
                       >
                         <Trash2 className="w-4 h-4" />
-                        <span>Delete Permanently</span>
+                        <span>{t.myListings.deletePermanently}</span>
                       </button>
                     </div>
                   </div>
@@ -493,20 +495,20 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
         {showArchiveModal && (
           <div className="fixed inset-0 flex items-center justify-center z-50">
             <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4 relative z-10">
-              <h2 className="mb-4">Archive Listing</h2>
-              <p className="text-gray-600 mb-6">Are you sure you want to archive this listing? You can renew it later.</p>
+              <h2 className="mb-4">{t.myListings.archiveTitle}</h2>
+              <p className="text-gray-600 mb-6">{t.myListings.archiveMessage}</p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={cancelArchive}
                   className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                 >
-                  Cancel
+                  {t.common.cancel}
                 </button>
                 <button
                   onClick={confirmArchive}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Archive
+                  {t.common.delete}
                 </button>
               </div>
             </div>
@@ -517,20 +519,20 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
         {showDeleteModal && (
           <div className="fixed inset-0 flex items-center justify-center z-50">
             <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4 relative z-10">
-              <h2 className="mb-4 text-red-600">Delete Listing Permanently</h2>
-              <p className="text-gray-600 mb-6">Are you sure you want to permanently delete this listing? This action cannot be undone.</p>
+              <h2 className="mb-4 text-red-600">{t.myListings.deleteTitle}</h2>
+              <p className="text-gray-600 mb-6">{t.myListings.deleteMessage}</p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={cancelDelete}
                   className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                 >
-                  Cancel
+                  {t.common.cancel}
                 </button>
                 <button
                   onClick={confirmDelete}
                   className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
-                  Delete Permanently
+                  {t.myListings.deletePermanently}
                 </button>
               </div>
             </div>

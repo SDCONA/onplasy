@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Inbox } from 'lucide-react';
+import { supabase } from '../utils/supabase/client';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import OfferCard from '../components/OfferCard';
+import ListingOfferGroup from '../components/ListingOfferGroup';
+import { useTranslation } from '../translations';
 
 interface OffersPageProps {
   user: any;
@@ -26,15 +29,21 @@ export default function OffersPage({ user }: OffersPageProps) {
   const fetchOffers = async () => {
     setLoading(true);
     try {
-      const session = await user?.getSession?.();
+      const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        console.error('No access token available');
+        setLoading(false);
+        return;
+      }
 
       // Fetch sent offers
       const sentResponse = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/offers/sent`,
         {
           headers: {
-            'Authorization': `Bearer ${accessToken || publicAnonKey}`
+            'Authorization': `Bearer ${accessToken}`
           }
         }
       );
@@ -48,7 +57,7 @@ export default function OffersPage({ user }: OffersPageProps) {
         `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/offers/received`,
         {
           headers: {
-            'Authorization': `Bearer ${accessToken || publicAnonKey}`
+            'Authorization': `Bearer ${accessToken}`
           }
         }
       );
@@ -66,6 +75,47 @@ export default function OffersPage({ user }: OffersPageProps) {
   const activeOffers = activeTab === 'sent' ? sentOffers.filter(o => ['pending', 'countered'].includes(o.status)) : receivedOffers.filter(o => ['pending', 'countered'].includes(o.status));
   const pastOffers = activeTab === 'sent' ? sentOffers.filter(o => !['pending', 'countered'].includes(o.status)) : receivedOffers.filter(o => !['pending', 'countered'].includes(o.status));
 
+  // Group received offers by listing
+  const groupOffersByListing = (offers: any[]) => {
+    const grouped = new Map<string, { listing: any; offers: any[] }>();
+    
+    offers.forEach(offer => {
+      const listingId = offer.listing?.id;
+      if (!listingId) return;
+      
+      if (!grouped.has(listingId)) {
+        grouped.set(listingId, {
+          listing: offer.listing,
+          offers: []
+        });
+      }
+      grouped.get(listingId)!.offers.push(offer);
+    });
+    
+    // Convert to array and sort: unread listings first
+    const groupsArray = Array.from(grouped.values());
+    groupsArray.sort((a, b) => {
+      const aHasUnread = a.offers.some(o => o.is_read === false);
+      const bHasUnread = b.offers.some(o => o.is_read === false);
+      
+      // Unread listings come first
+      if (aHasUnread && !bHasUnread) return -1;
+      if (!aHasUnread && bHasUnread) return 1;
+      
+      // Otherwise sort by latest offer
+      const aLatest = new Date(a.offers[0]?.created_at || 0).getTime();
+      const bLatest = new Date(b.offers[0]?.created_at || 0).getTime();
+      return bLatest - aLatest;
+    });
+    
+    return groupsArray;
+  };
+
+  const receivedActiveGroups = activeTab === 'received' ? groupOffersByListing(activeOffers) : [];
+  const receivedPastGroups = activeTab === 'received' ? groupOffersByListing(pastOffers) : [];
+
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -78,7 +128,7 @@ export default function OffersPage({ user }: OffersPageProps) {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-2xl">My Offers</h1>
+            <h1 className="text-2xl">{t.offers.myOffers}</h1>
           </div>
 
           {/* Tabs */}
@@ -91,10 +141,10 @@ export default function OffersPage({ user }: OffersPageProps) {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Received
-              {receivedOffers.filter(o => ['pending', 'countered'].includes(o.status)).length > 0 && (
+              {t.offers.received}
+              {receivedOffers.filter(o => o.is_read === false).length > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full">
-                  {receivedOffers.filter(o => ['pending', 'countered'].includes(o.status)).length}
+                  {receivedOffers.filter(o => o.is_read === false).length}
                 </span>
               )}
             </button>
@@ -106,7 +156,7 @@ export default function OffersPage({ user }: OffersPageProps) {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Sent
+              {t.offers.sent}
               {sentOffers.filter(o => ['pending', 'countered'].includes(o.status)).length > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full">
                   {sentOffers.filter(o => ['pending', 'countered'].includes(o.status)).length}
@@ -135,59 +185,118 @@ export default function OffersPage({ user }: OffersPageProps) {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Active Offers */}
-            {activeOffers.length > 0 && (
-              <div>
-                <h2 className="text-lg mb-3">
-                  Active Offers ({activeOffers.length})
-                </h2>
-                <div className="space-y-4">
-                  {activeOffers.map((offer) => (
-                    <OfferCard
-                      key={offer.id}
-                      offer={offer}
-                      user={user}
-                      type={activeTab}
-                      onUpdate={fetchOffers}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            {activeTab === 'received' ? (
+              /* RECEIVED TAB - Grouped by Listing */
+              <>
+                {/* Active Listings with Offers */}
+                {receivedActiveGroups.length > 0 && (
+                  <div>
+                    <h2 className="text-lg mb-3">
+                      Active Listings with Offers ({receivedActiveGroups.length})
+                    </h2>
+                    <div className="space-y-4">
+                      {receivedActiveGroups.map((group) => (
+                        <ListingOfferGroup
+                          key={group.listing.id}
+                          listing={group.listing}
+                          offers={group.offers}
+                          user={user}
+                          onUpdate={fetchOffers}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* Past Offers */}
-            {pastOffers.length > 0 && (
-              <div>
-                <h2 className="text-lg mb-3">
-                  Past Offers ({pastOffers.length})
-                </h2>
-                <div className="space-y-4">
-                  {pastOffers.map((offer) => (
-                    <OfferCard
-                      key={offer.id}
-                      offer={offer}
-                      user={user}
-                      type={activeTab}
-                      onUpdate={fetchOffers}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+                {/* Past Listings with Offers */}
+                {receivedPastGroups.length > 0 && (
+                  <div>
+                    <h2 className="text-lg mb-3">
+                      Past Listings ({receivedPastGroups.length})
+                    </h2>
+                    <div className="space-y-4">
+                      {receivedPastGroups.map((group) => (
+                        <ListingOfferGroup
+                          key={group.listing.id}
+                          listing={group.listing}
+                          offers={group.offers}
+                          user={user}
+                          onUpdate={fetchOffers}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* Empty State */}
-            {activeOffers.length === 0 && pastOffers.length === 0 && (
-              <div className="text-center py-12">
-                <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg text-gray-600 mb-2">
-                  No {activeTab === 'sent' ? 'Sent' : 'Received'} Offers
-                </h3>
-                <p className="text-sm text-gray-500">
-                  {activeTab === 'sent'
-                    ? 'Make offers on listings to start negotiating'
-                    : 'Offers from buyers will appear here'}
-                </p>
-              </div>
+                {/* Empty State for Received */}
+                {receivedActiveGroups.length === 0 && receivedPastGroups.length === 0 && (
+                  <div className="text-center py-12">
+                    <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg text-gray-600 mb-2">
+                      No Received Offers
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Offers from buyers will appear here
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* SENT TAB - Keep as Flat List */
+              <>
+                {/* Active Offers */}
+                {activeOffers.length > 0 && (
+                  <div>
+                    <h2 className="text-lg mb-3">
+                      Active Offers ({activeOffers.length})
+                    </h2>
+                    <div className="space-y-4">
+                      {activeOffers.map((offer) => (
+                        <OfferCard
+                          key={offer.id}
+                          offer={offer}
+                          user={user}
+                          type={activeTab}
+                          onUpdate={fetchOffers}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Past Offers */}
+                {pastOffers.length > 0 && (
+                  <div>
+                    <h2 className="text-lg mb-3">
+                      Past Offers ({pastOffers.length})
+                    </h2>
+                    <div className="space-y-4">
+                      {pastOffers.map((offer) => (
+                        <OfferCard
+                          key={offer.id}
+                          offer={offer}
+                          user={user}
+                          type={activeTab}
+                          onUpdate={fetchOffers}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State for Sent */}
+                {activeOffers.length === 0 && pastOffers.length === 0 && (
+                  <div className="text-center py-12">
+                    <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg text-gray-600 mb-2">
+                      No Sent Offers
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Make offers on listings to start negotiating
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

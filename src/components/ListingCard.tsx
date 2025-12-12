@@ -4,6 +4,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import ListingPreviewModal from './ListingPreviewModal';
+import { useTranslation, nameToSlug } from '../translations';
 
 interface ListingCardProps {
   listing: any;
@@ -13,6 +14,7 @@ interface ListingCardProps {
 }
 
 export default function ListingCard({ listing, user, onUpdate, initialSaved = false }: ListingCardProps) {
+  const { t } = useTranslation();
   const [isSaved, setIsSaved] = useState(initialSaved);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -177,11 +179,11 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
           {listing.categories && (
             <div className="mt-2 hidden md:block">
               <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                {listing.categories.name}
+                {t.categories[nameToSlug(listing.categories.slug || listing.categories.name) as keyof typeof t.categories] || listing.categories.name}
               </span>
               {listing.subcategories && (
                 <span className="inline-block ml-1 px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs">
-                  {listing.subcategories.name}
+                  {t.categories[nameToSlug(listing.subcategories.slug || listing.subcategories.name) as keyof typeof t.categories] || listing.subcategories.name}
                 </span>
               )}
             </div>

@@ -5,12 +5,14 @@ import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import SearchableSelect from '../components/SearchableSelect';
 import { processImage, formatBytes, getSizeReduction } from '../utils/imageProcessing';
+import { useTranslation, nameToSlug } from '../translations';
 
 interface CreateListingPageProps {
   user: any;
 }
 
 export default function CreateListingPage({ user }: CreateListingPageProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<any[]>([]);
   const [categoryId, setCategoryId] = useState('');
@@ -206,14 +208,14 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link to="/" className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
             <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
+            <span>{t.common.back}</span>
           </Link>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h1 className="mb-6">Create New Listing</h1>
+          <h1 className="mb-6">{t.createListing.title}</h1>
 
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded mb-4">
@@ -223,7 +225,7 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
 
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label className="block text-gray-700 mb-2">Title</label>
+              <label className="block text-gray-700 mb-2">{t.createListing.listingTitle}</label>
               <input
                 type="text"
                 value={title}
@@ -235,12 +237,12 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
                 required
                 maxLength={70}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., iPhone 13 Pro Max"
+                placeholder={t.createListing.titlePlaceholder}
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 mb-2">Category</label>
+              <label className="block text-gray-700 mb-2">{t.createListing.category}</label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
@@ -249,7 +251,7 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
               >
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.name}
+                    {t.categories[category.slug as keyof typeof t.categories] || category.name}
                   </option>
                 ))}
               </select>
@@ -257,19 +259,20 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
 
             {subcategories.length > 0 && (
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Subcategory</label>
+                <label className="block text-gray-700 mb-2">{t.createListing.subcategory}</label>
                 <SearchableSelect
                   options={subcategories}
                   value={subcategoryId}
                   onChange={setSubcategoryId}
-                  placeholder="Select a subcategory..."
+                  placeholder={t.createListing.selectSubcategory}
+                  getDisplayName={(option) => t.categories[option.slug as keyof typeof t.categories] || option.name}
                   required
                 />
               </div>
             )}
 
             <div className="mb-4">
-              <label className="block text-gray-700 mb-2">Price (USD)</label>
+              <label className="block text-gray-700 mb-2">{t.createListing.price} (USD)</label>
               <input
                 type="number"
                 step="0.01"
@@ -278,13 +281,13 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
                 onChange={(e) => setPrice(e.target.value)}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0.00"
+                placeholder={t.createListing.pricePlaceholder}
               />
             </div>
 
             <div className="mb-4">
               <label className="block text-gray-700 mb-2">
-                Description ({description.length}/500 characters)
+                {t.createListing.description} ({description.length}/500 characters)
               </label>
               <textarea
                 value={description}
@@ -297,13 +300,13 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
                 rows={6}
                 maxLength={500}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Describe your item..."
+                placeholder={t.createListing.descriptionPlaceholder}
               />
             </div>
 
             {!isRealEstate && (
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Zip Code</label>
+                <label className="block text-gray-700 mb-2">{t.createListing.zipcode}</label>
                 <input
                   type="text"
                   value={listingZipCode}
@@ -311,7 +314,7 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
                   required
                   maxLength={5}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter 5-digit zip code"
+                  placeholder={t.createListing.zipcodePlaceholder}
                 />
                 <p className="text-sm text-gray-500 mt-1">This helps buyers find your listing by location</p>
               </div>
@@ -320,21 +323,21 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
             {isRealEstate && (
               <>
                 <div className="mb-4">
-                  <label className="block text-gray-700 mb-2">Listing Type</label>
+                  <label className="block text-gray-700 mb-2">{t.createListing.listingType}</label>
                   <select
                     value={listingType}
                     onChange={(e) => setListingType(e.target.value)}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Select Listing Type</option>
-                    <option value="sale">For Sale</option>
-                    <option value="rent">For Rent</option>
+                    <option value="">{t.createListing.selectCondition}</option>
+                    <option value="sale">{t.createListing.sale}</option>
+                    <option value="rent">{t.createListing.rent}</option>
                   </select>
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-gray-700 mb-2">Zip Code</label>
+                  <label className="block text-gray-700 mb-2">{t.createListing.zipcode}</label>
                   <input
                     type="number"
                     value={listingZipCode}
@@ -578,7 +581,7 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
               disabled={loading}
               className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create Listing'}
+              {loading ? t.createListing.creating : t.createListing.submit}
             </button>
           </form>
         </div>

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './utils/supabase/client';
 import { projectId, publicAnonKey } from './utils/supabase/info';
 import Header from './components/Header';
+import { LanguageProvider } from './translations';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -132,6 +133,12 @@ export default function App() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
 
+        // Don't make request if no valid token
+        if (!token) {
+          setUnreadCount(0);
+          return;
+        }
+
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/unread-count`,
           {
@@ -169,6 +176,12 @@ export default function App() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
+
+        // Don't make request if no valid token
+        if (!token) {
+          setOffersCount(0);
+          return;
+        }
 
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/offers/count`,
@@ -211,54 +224,56 @@ export default function App() {
 
   return (
     <Router>
-      <Header user={user} unreadCount={unreadCount} offersCount={offersCount} />
-      <Routes>
-        <Route path="/" element={<HomePage user={user} />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/signin" element={<Navigate to="/auth" replace />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/listing/:id" element={<ListingDetailPage user={user} />} />
-        <Route 
-          path="/create-listing" 
-          element={user ? <CreateListingPage user={user} /> : <Navigate to="/auth" />} 
-        />
-        <Route 
-          path="/edit-listing/:id" 
-          element={user ? <EditListingPage user={user} /> : <Navigate to="/auth" />} 
-        />
-        <Route 
-          path="/messages" 
-          element={user ? <MessagesPage user={user} /> : <Navigate to="/auth" />} 
-        />
-        <Route 
-          path="/messages/:conversationId" 
-          element={user ? <ConversationPage user={user} /> : <Navigate to="/auth" />} 
-        />
-        <Route 
-          path="/profile/:userId" 
-          element={<ProfilePage currentUser={user} />} 
-        />
-        <Route 
-          path="/account" 
-          element={user ? <AccountPage user={user} onUserUpdate={handleUserUpdate} /> : <Navigate to="/auth" />} 
-        />
-        <Route 
-          path="/saved" 
-          element={user ? <SavedListingsPage user={user} /> : <Navigate to="/auth" />} 
-        />
-        <Route 
-          path="/my-listings" 
-          element={user ? <MyListingsPage user={user} /> : <Navigate to="/auth" />} 
-        />
-        <Route 
-          path="/admin" 
-          element={user ? <AdminPage user={user} /> : <Navigate to="/auth" />} 
-        />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/offers" element={user ? <OffersPage user={user} /> : <Navigate to="/auth" />} />
-      </Routes>
+      <LanguageProvider>
+        <Header user={user} unreadCount={unreadCount} offersCount={offersCount} />
+        <Routes>
+          <Route path="/" element={<HomePage user={user} />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/signin" element={<Navigate to="/auth" replace />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/listing/:id" element={<ListingDetailPage user={user} />} />
+          <Route 
+            path="/create-listing" 
+            element={user ? <CreateListingPage user={user} /> : <Navigate to="/auth" />} 
+          />
+          <Route 
+            path="/edit-listing/:id" 
+            element={user ? <EditListingPage user={user} /> : <Navigate to="/auth" />} 
+          />
+          <Route 
+            path="/messages" 
+            element={user ? <MessagesPage user={user} /> : <Navigate to="/auth" />} 
+          />
+          <Route 
+            path="/messages/:conversationId" 
+            element={user ? <ConversationPage user={user} /> : <Navigate to="/auth" />} 
+          />
+          <Route 
+            path="/profile/:userId" 
+            element={<ProfilePage currentUser={user} />} 
+          />
+          <Route 
+            path="/account" 
+            element={user ? <AccountPage user={user} onUserUpdate={handleUserUpdate} /> : <Navigate to="/auth" />} 
+          />
+          <Route 
+            path="/saved" 
+            element={user ? <SavedListingsPage user={user} /> : <Navigate to="/auth" />} 
+          />
+          <Route 
+            path="/my-listings" 
+            element={user ? <MyListingsPage user={user} /> : <Navigate to="/auth" />} 
+          />
+          <Route 
+            path="/admin" 
+            element={user ? <AdminPage user={user} /> : <Navigate to="/auth" />} 
+          />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/offers" element={user ? <OffersPage user={user} /> : <Navigate to="/auth" />} />
+        </Routes>
+      </LanguageProvider>
     </Router>
   );
 }
