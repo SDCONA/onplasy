@@ -291,22 +291,10 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
                 </div>
               )}
 
-              <div className="border-t border-gray-200 pt-4 mb-4">
-                <p className="text-gray-500">Posted on {formatDate(listing.created_at)}</p>
+              <div className="flex items-center gap-4 text-sm mb-4">
+                <p className="text-gray-500">{formatDate(listing.created_at)}</p>
                 <p className="text-gray-500">{listing.views} views</p>
               </div>
-
-              {/* Debug info - remove after testing */}
-              {user && (
-                <div className="bg-yellow-50 border border-yellow-200 p-3 rounded mb-3 text-xs">
-                  <p>Debug Info:</p>
-                  <p>Current User ID: {user?.id}</p>
-                  <p>Listing Owner ID: {listing.user_id}</p>
-                  <p>Listing Status: {listing.status}</p>
-                  <p>Same User: {user?.id === listing.user_id ? 'YES' : 'NO'}</p>
-                  <p>Should Show Button: {user?.id !== listing.user_id && listing.status === 'active' ? 'YES' : 'NO'}</p>
-                </div>
-              )}
 
               {user?.id !== listing.user_id && listing.status === 'active' && (
                 <div className="space-y-3">
