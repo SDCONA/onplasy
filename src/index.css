@@ -1407,10 +1407,6 @@
     background-color: var(--color-slate-100);
   }
 
-  .bg-transparent {
-    background-color: #0000;
-  }
-
   .bg-white {
     background-color: var(--color-white);
   }

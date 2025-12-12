@@ -548,6 +548,12 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
                         alt={`Preview ${index + 1}`} 
                         className="w-full h-full object-contain" 
                       />
+                      {/* Show overlay on 4th image if there are more images */}
+                      {index === 3 && images.length > 4 && (
+                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                          <p className="text-white text-opacity-90">+{images.length - 4}</p>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
@@ -557,11 +563,6 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
                       </button>
                     </div>
                   ))}
-                  {images.length > 4 && (
-                    <div className="aspect-square bg-transparent rounded-lg flex items-center justify-center">
-                      <p className="text-gray-600">+{images.length - 4} more</p>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
