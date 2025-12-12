@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Heart, MessageSquare, User, LogOut, FileText, Shield, Settings, ShieldCheck } from 'lucide-react';
+import { Menu, X, Heart, MessageSquare, User, LogOut, FileText, Shield, Settings, ShieldCheck, DollarSign } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface HeaderProps {
   user: any;
   unreadCount?: number;
+  offersCount?: number;
 }
 
-export default function Header({ user, unreadCount = 0 }: HeaderProps) {
+export default function Header({ user, unreadCount = 0, offersCount = 0 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -62,6 +63,15 @@ export default function Header({ user, unreadCount = 0 }: HeaderProps) {
                     </span>
                   )}
                 </Link>
+                <Link to="/offers" className="relative flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">
+                  <DollarSign className="w-5 h-5" />
+                  <span>Offers</span>
+                  {offersCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {offersCount > 9 ? '9+' : offersCount}
+                    </span>
+                  )}
+                </Link>
                 <Link to="/saved" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-pink-50 text-pink-700 hover:bg-pink-100 transition-colors">
                   <Heart className="w-5 h-5" />
                   <span>Saved</span>
@@ -101,6 +111,14 @@ export default function Header({ user, unreadCount = 0 }: HeaderProps) {
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-md">
                       {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+                <Link to="/offers" className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                  <DollarSign className="w-6 h-6" strokeWidth={2.5} />
+                  {offersCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-md">
+                      {offersCount > 9 ? '9+' : offersCount}
                     </span>
                   )}
                 </Link>

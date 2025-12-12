@@ -8,6 +8,29 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const resendApiKey = Deno.env.get('RESEND_API_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Function to expire old offers
+async function expireOldOffers() {
+  try {
+    const { data: expiredOffers, error } = await supabase
+      .from('offers')
+      .update({ status: 'expired' })
+      .in('status', ['pending', 'countered'])
+      .lt('expires_at', new Date().toISOString())
+      .select();
+
+    if (error) {
+      console.error('Error expiring offers:', error);
+      return 0;
+    }
+
+    console.log(`Expired ${expiredOffers?.length || 0} offers`);
+    return expiredOffers?.length || 0;
+  } catch (error) {
+    console.error('Exception expiring offers:', error);
+    return 0;
+  }
+}
+
 // This function runs every 30 minutes via cron (updated 2025-12-10)
 Deno.serve(async (req) => {
   // Allow cron jobs to invoke this function
@@ -23,9 +46,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Starting email notification check...');
+    console.log('Starting email notification and offer expiration check...');
     
-    // 1. Get all unread messages
+    // 1. Expire old offers
+    const expiredCount = await expireOldOffers();
+    console.log(`Offer expiration complete: ${expiredCount} offers expired`);
+    
+    // 2. Get all unread messages
     const { data: unreadMessages, error: messagesError } = await supabase
       .from('messages')
       .select('id, conversation_id, sender_id, recipient_id, created_at')
@@ -44,7 +71,7 @@ Deno.serve(async (req) => {
     
     console.log(`Found ${unreadMessages.length} unread messages`);
     
-    // 2. Filter out messages that already triggered emails
+    // 3. Filter out messages that already triggered emails
     const messageIds = unreadMessages.map(m => m.id);
     const { data: alreadyNotified, error: notifiedError } = await supabase
       .from('email_notifications_sent')
@@ -66,7 +93,7 @@ Deno.serve(async (req) => {
     
     console.log(`Found ${newUnreadMessages.length} new unread messages to notify`);
     
-    // 3. Group by receiver
+    // 4. Group by receiver
     const messagesByReceiver = new Map<string, typeof newUnreadMessages>();
     for (const message of newUnreadMessages) {
       const existing = messagesByReceiver.get(message.recipient_id) || [];
@@ -76,7 +103,7 @@ Deno.serve(async (req) => {
     
     console.log(`Grouped messages for ${messagesByReceiver.size} receivers`);
     
-    // 4. For each receiver, check preferences and send email
+    // 5. For each receiver, check preferences and send email
     const userIds = Array.from(messagesByReceiver.keys());
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
@@ -185,7 +212,7 @@ Deno.serve(async (req) => {
       }
     }
     
-    // 5. Insert notification records
+    // 6. Insert notification records
     if (notificationsToInsert.length > 0) {
       const { error: insertError } = await supabase
         .from('email_notifications_sent')

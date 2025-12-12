@@ -19,6 +19,10 @@ export default function HomePage({ user }: HomePageProps) {
   const [locationSearch, setLocationSearch] = useState('');
   const [zipcode, setZipcode] = useState('');
   const [distance, setDistance] = useState(50);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [condition, setCondition] = useState('all');
+  const [datePosted, setDatePosted] = useState('all');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -37,12 +41,12 @@ export default function HomePage({ user }: HomePageProps) {
     setListings([]);
     setOffset(0);
     setHasMore(true);
-  }, [selectedCategory, selectedSubcategory, searchQuery, sortBy, listingType, locationSearch, zipcode, distance]);
+  }, [selectedCategory, selectedSubcategory, searchQuery, sortBy, listingType, locationSearch, zipcode, distance, minPrice, maxPrice, condition, datePosted]);
 
   useEffect(() => {
     // Fetch listings when offset changes or on initial load
     fetchListings();
-  }, [offset, selectedCategory, selectedSubcategory, searchQuery, sortBy, listingType, locationSearch, zipcode, distance]);
+  }, [offset, selectedCategory, selectedSubcategory, searchQuery, sortBy, listingType, locationSearch, zipcode, distance, minPrice, maxPrice, condition, datePosted]);
 
   const fetchCategories = async () => {
     try {
@@ -80,6 +84,10 @@ export default function HomePage({ user }: HomePageProps) {
         ...(locationSearch && { location: locationSearch }),
         ...(zipcode && { zipcode }),
         ...(zipcode && { distance: distance.toString() }),
+        ...(minPrice && { minPrice: minPrice }),
+        ...(maxPrice && { maxPrice: maxPrice }),
+        ...(condition !== 'all' && { condition }),
+        ...(datePosted !== 'all' && { datePosted }),
         offset: offset.toString(),
         limit: '20'
       });
@@ -120,6 +128,10 @@ export default function HomePage({ user }: HomePageProps) {
     setLocationSearch(''); // Reset location search when category changes
     setZipcode(''); // Reset zipcode when category changes
     setDistance(50); // Reset distance when category changes
+    setMinPrice(''); // Reset min price when category changes
+    setMaxPrice(''); // Reset max price when category changes
+    setCondition('all'); // Reset condition when category changes
+    setDatePosted('all'); // Reset date posted when category changes
   };
 
   const selectedCategoryObj = categories.find(c => c.slug === selectedCategory);
@@ -274,6 +286,59 @@ export default function HomePage({ user }: HomePageProps) {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">Price Range</label>
+                <div className="flex gap-4">
+                  <input
+                    type="text"
+                    placeholder="Min Price"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Max Price"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Condition */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">Condition</label>
+                <select
+                  value={condition}
+                  onChange={(e) => setCondition(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="all">All</option>
+                  <option value="new">New</option>
+                  <option value="like-new">Like New</option>
+                  <option value="good">Good</option>
+                  <option value="fair">Fair</option>
+                  <option value="poor">Poor</option>
+                </select>
+              </div>
+
+              {/* Date Posted */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">Date Posted</label>
+                <select
+                  value={datePosted}
+                  onChange={(e) => setDatePosted(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="all">All Time</option>
+                  <option value="24h">Last 24 Hours</option>
+                  <option value="week">Last 7 Days</option>
+                  <option value="month">Last 30 Days</option>
+                </select>
               </div>
             </div>
           )}

@@ -5,6 +5,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyRecaptcha } from './recaptcha.ts';
 import { getOptimizedListings, geocodeAndSave } from './listings_optimized.tsx';
 import * as kv from './kv_store.tsx';
+import { sendOfferEmail } from './offers.tsx';
 
 const app = new Hono();
 
@@ -382,6 +383,10 @@ app.get('/make-server-5dec7914/listings', async (c) => {
     const location = c.req.query('location'); // Location filter for services
     const zipcode = c.req.query('zipcode'); // Zipcode filter
     const distance = parseInt(c.req.query('distance') || '50'); // Distance in miles
+    const minPrice = c.req.query('minPrice') ? parseFloat(c.req.query('minPrice')!) : undefined;
+    const maxPrice = c.req.query('maxPrice') ? parseFloat(c.req.query('maxPrice')!) : undefined;
+    const condition = c.req.query('condition'); // Product condition
+    const datePosted = c.req.query('datePosted'); // Date filter (24h, week, month, all)
     const limit = parseInt(c.req.query('limit') || '30'); // Pagination limit
     const offset = parseInt(c.req.query('offset') || '0'); // Pagination offset
     
@@ -397,6 +402,10 @@ app.get('/make-server-5dec7914/listings', async (c) => {
       location,
       zipcode,
       distance,
+      minPrice,
+      maxPrice,
+      condition,
+      datePosted,
       limit,
       offset
     });
@@ -2194,6 +2203,420 @@ app.post('/make-server-5dec7914/upload-image', async (c) => {
   } catch (error) {
     console.log('Upload image exception:', error);
     return c.json({ error: 'Failed to upload image' }, 500);
+  }
+});
+
+// Offers routes
+app.post('/make-server-5dec7914/offers', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const { listing_id, amount, message } = await c.req.json();
+    
+    // Validate amount
+    if (!amount || amount <= 0) {
+      return c.json({ error: 'Invalid offer amount' }, 400);
+    }
+    
+    // Get listing details
+    const { data: listing, error: listingError } = await supabase
+      .from('listings')
+      .select('*, profiles!listings_user_id_fkey(id, name, email)')
+      .eq('id', listing_id)
+      .single();
+    
+    if (listingError || !listing) {
+      return c.json({ error: 'Listing not found' }, 404);
+    }
+    
+    // Validate business rules
+    if (listing.user_id === user.id) {
+      return c.json({ error: 'Cannot make an offer on your own listing' }, 400);
+    }
+    
+    if (listing.status !== 'active') {
+      return c.json({ error: 'Cannot make an offer on inactive listings' }, 400);
+    }
+    
+    // Validate amount range (10% to 100% of asking price)
+    const minOffer = listing.price * 0.1;
+    if (amount < minOffer) {
+      return c.json({ error: `Minimum offer is ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(minOffer)}` }, 400);
+    }
+    
+    if (amount > listing.price) {
+      return c.json({ error: 'Offer cannot exceed asking price' }, 400);
+    }
+    
+    // Check for existing active offer
+    const { data: existingOffer } = await supabase
+      .from('offers')
+      .select('id')
+      .eq('buyer_id', user.id)
+      .eq('listing_id', listing_id)
+      .in('status', ['pending', 'countered'])
+      .single();
+    
+    if (existingOffer) {
+      return c.json({ error: 'You already have an active offer on this listing' }, 400);
+    }
+    
+    // Create offer (expires in 48 hours)
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+    
+    const { data: offer, error: offerError } = await supabase
+      .from('offers')
+      .insert({
+        listing_id,
+        buyer_id: user.id,
+        seller_id: listing.user_id,
+        amount,
+        message: message || null,
+        status: 'pending',
+        round: 1,
+        expires_at: expiresAt
+      })
+      .select()
+      .single();
+    
+    if (offerError) {
+      console.error('Create offer error:', offerError);
+      return c.json({ error: offerError.message }, 400);
+    }
+    
+    // Get buyer profile for email
+    const { data: buyer } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .eq('id', user.id)
+      .single();
+    
+    // Send email notification to seller
+    sendOfferEmail('new', offer, listing, buyer, listing.profiles).catch(err =>
+      console.error('Email send error (non-fatal):', err)
+    );
+    
+    return c.json({ offer });
+  } catch (error) {
+    console.error('Create offer exception:', error);
+    return c.json({ error: 'Failed to create offer' }, 500);
+  }
+});
+
+app.get('/make-server-5dec7914/offers/sent', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const { data: offers, error } = await supabase
+      .from('offers')
+      .select(`
+        *,
+        listing:listings(
+          id, title, price, images, status,
+          profiles!listings_user_id_fkey(id, name, avatar_url)
+        )
+      `)
+      .eq('buyer_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Fetch sent offers error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+    
+    return c.json({ offers: offers || [] });
+  } catch (error) {
+    console.error('Fetch sent offers exception:', error);
+    return c.json({ error: 'Failed to fetch offers' }, 500);
+  }
+});
+
+app.get('/make-server-5dec7914/offers/received', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const { data: offers, error } = await supabase
+      .from('offers')
+      .select(`
+        *,
+        listing:listings(id, title, price, images, status),
+        buyer:profiles!offers_buyer_id_fkey(id, name, avatar_url)
+      `)
+      .eq('seller_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Fetch received offers error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+    
+    return c.json({ offers: offers || [] });
+  } catch (error) {
+    console.error('Fetch received offers exception:', error);
+    return c.json({ error: 'Failed to fetch offers' }, 500);
+  }
+});
+
+app.get('/make-server-5dec7914/offers/count', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const { count, error } = await supabase
+      .from('offers')
+      .select('*', { count: 'exact', head: true })
+      .eq('seller_id', user.id)
+      .in('status', ['pending', 'countered']);
+    
+    if (error) {
+      console.error('Count offers error:', error);
+      return c.json({ count: 0 });
+    }
+    
+    return c.json({ count: count || 0 });
+  } catch (error) {
+    console.error('Count offers exception:', error);
+    return c.json({ count: 0 });
+  }
+});
+
+app.get('/make-server-5dec7914/offers/listing/:listingId', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const listingId = c.req.param('listingId');
+    
+    // Verify user owns the listing
+    const { data: listing } = await supabase
+      .from('listings')
+      .select('user_id')
+      .eq('id', listingId)
+      .single();
+    
+    if (!listing || listing.user_id !== user.id) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
+    
+    const { data: offers, error } = await supabase
+      .from('offers')
+      .select(`
+        *,
+        buyer:profiles!offers_buyer_id_fkey(id, name, avatar_url)
+      `)
+      .eq('listing_id', listingId)
+      .order('amount', { ascending: false });
+    
+    if (error) {
+      console.error('Fetch listing offers error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+    
+    return c.json({ offers: offers || [] });
+  } catch (error) {
+    console.error('Fetch listing offers exception:', error);
+    return c.json({ error: 'Failed to fetch offers' }, 500);
+  }
+});
+
+app.put('/make-server-5dec7914/offers/:id/accept', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const offerId = c.req.param('id');
+    
+    // Get offer with listing and profiles
+    const { data: offer, error: offerError } = await supabase
+      .from('offers')
+      .select(`
+        *,
+        listing:listings(*, profiles!listings_user_id_fkey(id, name, email)),
+        buyer:profiles!offers_buyer_id_fkey(id, name, email)
+      `)
+      .eq('id', offerId)
+      .single();
+    
+    if (offerError || !offer) {
+      return c.json({ error: 'Offer not found' }, 404);
+    }
+    
+    // Verify user is the seller
+    if (offer.seller_id !== user.id) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
+    
+    // Verify offer is still pending/countered
+    if (!['pending', 'countered'].includes(offer.status)) {
+      return c.json({ error: 'Offer is no longer active' }, 400);
+    }
+    
+    // Accept offer
+    const { data: updatedOffer, error: updateError } = await supabase
+      .from('offers')
+      .update({ status: 'accepted' })
+      .eq('id', offerId)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Accept offer error:', updateError);
+      return c.json({ error: updateError.message }, 400);
+    }
+    
+    // Send email to buyer
+    sendOfferEmail('accepted', updatedOffer, offer.listing, offer.listing.profiles, offer.buyer).catch(err =>
+      console.error('Email send error (non-fatal):', err)
+    );
+    
+    return c.json({ offer: updatedOffer });
+  } catch (error) {
+    console.error('Accept offer exception:', error);
+    return c.json({ error: 'Failed to accept offer' }, 500);
+  }
+});
+
+app.put('/make-server-5dec7914/offers/:id/decline', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const offerId = c.req.param('id');
+    
+    // Get offer
+    const { data: offer, error: offerError } = await supabase
+      .from('offers')
+      .select(`
+        *,
+        listing:listings(*, profiles!listings_user_id_fkey(id, name, email)),
+        buyer:profiles!offers_buyer_id_fkey(id, name, email)
+      `)
+      .eq('id', offerId)
+      .single();
+    
+    if (offerError || !offer) {
+      return c.json({ error: 'Offer not found' }, 404);
+    }
+    
+    // Verify user is the seller
+    if (offer.seller_id !== user.id) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
+    
+    // Verify offer is still pending/countered
+    if (!['pending', 'countered'].includes(offer.status)) {
+      return c.json({ error: 'Offer is no longer active' }, 400);
+    }
+    
+    // Decline offer
+    const { data: updatedOffer, error: updateError } = await supabase
+      .from('offers')
+      .update({ status: 'declined' })
+      .eq('id', offerId)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Decline offer error:', updateError);
+      return c.json({ error: updateError.message }, 400);
+    }
+    
+    // Send email to buyer
+    sendOfferEmail('declined', updatedOffer, offer.listing, offer.listing.profiles, offer.buyer).catch(err =>
+      console.error('Email send error (non-fatal):', err)
+    );
+    
+    return c.json({ offer: updatedOffer });
+  } catch (error) {
+    console.error('Decline offer exception:', error);
+    return c.json({ error: 'Failed to decline offer' }, 500);
+  }
+});
+
+app.put('/make-server-5dec7914/offers/:id/counter', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    const offerId = c.req.param('id');
+    const { counter_amount } = await c.req.json();
+    
+    if (!counter_amount || counter_amount <= 0) {
+      return c.json({ error: 'Invalid counter amount' }, 400);
+    }
+    
+    // Get offer
+    const { data: offer, error: offerError } = await supabase
+      .from('offers')
+      .select(`
+        *,
+        listing:listings(*, profiles!listings_user_id_fkey(id, name, email)),
+        buyer:profiles!offers_buyer_id_fkey(id, name, email)
+      `)
+      .eq('id', offerId)
+      .single();
+    
+    if (offerError || !offer) {
+      return c.json({ error: 'Offer not found' }, 404);
+    }
+    
+    // Check who's countering (seller or buyer)
+    let isSeller = false;
+    if (offer.seller_id === user.id) {
+      isSeller = true;
+      if (offer.status !== 'pending' && offer.status !== 'countered') {
+        return c.json({ error: 'Cannot counter this offer' }, 400);
+      }
+    } else if (offer.buyer_id === user.id) {
+      if (offer.status !== 'countered') {
+        return c.json({ error: 'No counter-offer to respond to' }, 400);
+      }
+    } else {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
+    
+    // Check counter round limit
+    if (offer.round >= 3) {
+      return c.json({ error: 'Maximum counter-offer rounds (3) reached' }, 400);
+    }
+    
+    // Validate counter amount
+    const minOffer = offer.listing.price * 0.1;
+    if (counter_amount < minOffer || counter_amount > offer.listing.price) {
+      return c.json({ error: 'Counter amount out of valid range' }, 400);
+    }
+    
+    // Update offer
+    const { data: updatedOffer, error: updateError } = await supabase
+      .from('offers')
+      .update({
+        counter_amount,
+        status: 'countered',
+        round: offer.round + 1,
+        expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString() // Reset expiration
+      })
+      .eq('id', offerId)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Counter offer error:', updateError);
+      return c.json({ error: updateError.message }, 400);
+    }
+    
+    // Send email to the other party
+    const recipient = isSeller ? offer.buyer : offer.listing.profiles;
+    sendOfferEmail('countered', updatedOffer, offer.listing, offer.listing.profiles, recipient).catch(err =>
+      console.error('Email send error (non-fatal):', err)
+    );
+    
+    return c.json({ offer: updatedOffer });
+  } catch (error) {
+    console.error('Counter offer exception:', error);
+    return c.json({ error: 'Failed to counter offer' }, 500);
   }
 });
 

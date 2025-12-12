@@ -21,11 +21,13 @@ import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import OffersPage from './pages/OffersPage';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [offersCount, setOffersCount] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -156,6 +158,44 @@ export default function App() {
     return () => clearInterval(interval);
   }, [user]);
 
+  // Fetch offers count
+  useEffect(() => {
+    if (!user) {
+      setOffersCount(0);
+      return;
+    }
+
+    const fetchOffersCount = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/offers/count`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+
+        const data = await response.json();
+        if (response.ok) {
+          setOffersCount(data.count || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch offers count:', error);
+      }
+    };
+
+    fetchOffersCount();
+
+    // Poll for new offers every 30 seconds
+    const interval = setInterval(fetchOffersCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   const handleUserUpdate = (updatedUser: any) => {
     // Update user state when profile is updated
     setUser((prev: any) => ({ ...prev, ...updatedUser }));
@@ -171,7 +211,7 @@ export default function App() {
 
   return (
     <Router>
-      <Header user={user} unreadCount={unreadCount} />
+      <Header user={user} unreadCount={unreadCount} offersCount={offersCount} />
       <Routes>
         <Route path="/" element={<HomePage user={user} />} />
         <Route path="/auth" element={<AuthPage />} />
@@ -217,6 +257,7 @@ export default function App() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/offers" element={user ? <OffersPage user={user} /> : <Navigate to="/auth" />} />
       </Routes>
     </Router>
   );

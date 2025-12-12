@@ -51,6 +51,10 @@ export async function getOptimizedListings(params: {
   location?: string;
   zipcode?: string;
   distance?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  condition?: string;
+  datePosted?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -65,6 +69,10 @@ export async function getOptimizedListings(params: {
     location,
     zipcode,
     distance = 50,
+    minPrice,
+    maxPrice,
+    condition,
+    datePosted,
     limit = 30,
     offset = 0
   } = params;
@@ -131,6 +139,40 @@ export async function getOptimizedListings(params: {
     
     if (location) {
       query = query.or(`title.ilike.%${location}%,description.ilike.%${location}%`);
+    }
+    
+    if (minPrice !== undefined) {
+      query = query.gte('price', minPrice);
+    }
+    
+    if (maxPrice !== undefined) {
+      query = query.lte('price', maxPrice);
+    }
+    
+    if (condition) {
+      query = query.eq('condition', condition);
+    }
+    
+    // Date posted filter (last 24h, week, month)
+    if (datePosted && datePosted !== 'all') {
+      const now = new Date();
+      let dateThreshold: Date;
+      
+      switch (datePosted) {
+        case '24h':
+          dateThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case 'week':
+          dateThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          dateThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          dateThreshold = new Date(0); // All time
+      }
+      
+      query = query.gte('created_at', dateThreshold.toISOString());
     }
     
     // Fetch ALL listings with coordinates (we need to filter by distance)
@@ -243,6 +285,40 @@ export async function getOptimizedListings(params: {
   
   if (location) {
     query = query.or(`title.ilike.%${location}%,description.ilike.%${location}%`);
+  }
+  
+  if (minPrice !== undefined) {
+    query = query.gte('price', minPrice);
+  }
+  
+  if (maxPrice !== undefined) {
+    query = query.lte('price', maxPrice);
+  }
+  
+  if (condition) {
+    query = query.eq('condition', condition);
+  }
+  
+  // Date posted filter (last 24h, week, month)
+  if (datePosted && datePosted !== 'all') {
+    const now = new Date();
+    let dateThreshold: Date;
+    
+    switch (datePosted) {
+      case '24h':
+        dateThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case 'week':
+        dateThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        dateThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        dateThreshold = new Date(0); // All time
+    }
+    
+    query = query.gte('created_at', dateThreshold.toISOString());
   }
   
   // OPTIMIZED: Apply sorting at database level

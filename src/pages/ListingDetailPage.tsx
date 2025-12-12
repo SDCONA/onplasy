@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Heart, MapPin, Star, Flag, MessageCircle, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Heart, MapPin, Star, Flag, MessageCircle, X, ZoomIn, ZoomOut, DollarSign } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import ReportModal from '../components/ReportModal';
+import MakeOfferModal from '../components/MakeOfferModal';
 
 interface ListingDetailPageProps {
   user: any;
@@ -17,6 +18,7 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showMakeOfferModal, setShowMakeOfferModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -294,14 +296,23 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
                 <p className="text-gray-500">{listing.views} views</p>
               </div>
 
-              {user?.id !== listing.user_id && (
-                <button
-                  onClick={handleContact}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  <span>Contact Seller</span>
-                </button>
+              {user?.id !== listing.user_id && listing.status === 'active' && (
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setShowMakeOfferModal(true)}
+                    className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                  >
+                    <DollarSign className="w-5 h-5" />
+                    <span>Make an Offer</span>
+                  </button>
+                  <button
+                    onClick={handleContact}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    <span>Contact Seller</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -352,6 +363,18 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
           listingId={listing.id}
           onClose={() => setShowReportModal(false)}
           user={user}
+        />
+      )}
+
+      {showMakeOfferModal && (
+        <MakeOfferModal
+          listing={listing}
+          user={user}
+          onClose={() => setShowMakeOfferModal(false)}
+          onSuccess={() => {
+            // Optionally show success message
+            fetchListing();
+          }}
         />
       )}
 
