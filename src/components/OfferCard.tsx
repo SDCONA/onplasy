@@ -318,14 +318,26 @@ export default function OfferCard({ offer, user, type, onUpdate }: OfferCardProp
         </div>
       )}
 
-      {/* Accepted - Show Message Button */}
+      {/* Accepted - Show Message Button and Cancel Option */}
       {offer.status === 'accepted' && (
-        <Link
-          to={`/messages`}
-          className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Message {type === 'sent' ? 'Seller' : 'Buyer'}
-        </Link>
+        <div className="space-y-2">
+          <Link
+            to={`/messages`}
+            className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Message {type === 'sent' ? 'Seller' : 'Buyer'}
+          </Link>
+          
+          {/* Only sellers can cancel accepted offers */}
+          {type === 'received' && (
+            <button
+              onClick={handleDecline}
+              className="w-full px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              Cancel Accepted Offer
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

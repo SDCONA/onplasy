@@ -296,6 +296,18 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
                 <p className="text-gray-500">{listing.views} views</p>
               </div>
 
+              {/* Debug info - remove after testing */}
+              {user && (
+                <div className="bg-yellow-50 border border-yellow-200 p-3 rounded mb-3 text-xs">
+                  <p>Debug Info:</p>
+                  <p>Current User ID: {user?.id}</p>
+                  <p>Listing Owner ID: {listing.user_id}</p>
+                  <p>Listing Status: {listing.status}</p>
+                  <p>Same User: {user?.id === listing.user_id ? 'YES' : 'NO'}</p>
+                  <p>Should Show Button: {user?.id !== listing.user_id && listing.status === 'active' ? 'YES' : 'NO'}</p>
+                </div>
+              )}
+
               {user?.id !== listing.user_id && listing.status === 'active' && (
                 <div className="space-y-3">
                   <button

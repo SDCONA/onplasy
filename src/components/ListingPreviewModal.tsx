@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, MessageCircle, Flag, Star, ArrowLeft, Heart, Share2, MapPin } from 'lucide-react';
+import { X, MessageCircle, Flag, Star, ArrowLeft, Heart, Share2, MapPin, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import ReportModal from './ReportModal';
+import MakeOfferModal from './MakeOfferModal';
 import { supabase } from '../utils/supabase/client';
 
 interface ListingPreviewModalProps {
@@ -31,6 +32,7 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [showMakeOfferModal, setShowMakeOfferModal] = useState(false);
 
   const currentView = viewStack[viewStack.length - 1];
 
@@ -87,7 +89,8 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
               }
             }
           } catch (error) {
-            console.error('Failed to check saved status:', error);
+            // Silently fail - saved listings feature not yet implemented
+            console.log('Saved listings feature not available yet');
           }
         }
       }
@@ -255,6 +258,14 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
               </button>
             )}
             <h2>{currentView.type === 'listing' ? 'Listing Details' : 'Profile'}</h2>
+            {currentView.type === 'listing' && listing && (
+              <button
+                onClick={() => navigate(`/listing/${listing.id}`)}
+                className="text-sm text-blue-600 hover:text-blue-700 px-3 py-1 border border-blue-600 rounded-lg"
+              >
+                Open Full Page
+              </button>
+            )}
           </div>
           
           <div className="flex items-center gap-2">
@@ -487,13 +498,22 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
                 </div>
 
                 {user?.id !== listing.user_id && (
-                  <button
-                    onClick={handleContact}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span>Contact Seller</span>
-                  </button>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setShowMakeOfferModal(true)}
+                      className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                    >
+                      <DollarSign className="w-5 h-5" />
+                      <span>Make an Offer</span>
+                    </button>
+                    <button
+                      onClick={handleContact}
+                      className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                      <span>Contact Seller</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -720,6 +740,18 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
             </div>
           </div>
         </div>
+      )}
+
+      {showMakeOfferModal && listing && (
+        <MakeOfferModal
+          listing={listing}
+          user={user}
+          onClose={() => setShowMakeOfferModal(false)}
+          onSuccess={() => {
+            setShowMakeOfferModal(false);
+            // Could add a success message here
+          }}
+        />
       )}
     </div>
   );

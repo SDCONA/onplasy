@@ -2292,10 +2292,10 @@ app.post('/make-server-5dec7914/offers', async (c) => {
       .eq('id', user.id)
       .single();
     
-    // Send email notification to seller
-    sendOfferEmail('new', offer, listing, buyer, listing.profiles).catch(err =>
-      console.error('Email send error (non-fatal):', err)
-    );
+    // Don't send email immediately - let the cron job handle it (30 min delay)
+    // sendOfferEmail('new', offer, listing, buyer, listing.profiles).catch(err =>
+    //   console.error('Email send error (non-fatal):', err)
+    // );
     
     return c.json({ offer });
   } catch (error) {
@@ -2506,9 +2506,9 @@ app.put('/make-server-5dec7914/offers/:id/decline', async (c) => {
       return c.json({ error: 'Forbidden' }, 403);
     }
     
-    // Verify offer is still pending/countered
-    if (!['pending', 'countered'].includes(offer.status)) {
-      return c.json({ error: 'Offer is no longer active' }, 400);
+    // Verify offer is still pending/countered/accepted (allow declining accepted offers)
+    if (!['pending', 'countered', 'accepted'].includes(offer.status)) {
+      return c.json({ error: 'Offer cannot be declined' }, 400);
     }
     
     // Decline offer
@@ -2524,10 +2524,12 @@ app.put('/make-server-5dec7914/offers/:id/decline', async (c) => {
       return c.json({ error: updateError.message }, 400);
     }
     
-    // Send email to buyer
-    sendOfferEmail('declined', updatedOffer, offer.listing, offer.listing.profiles, offer.buyer).catch(err =>
-      console.error('Email send error (non-fatal):', err)
-    );
+    // Only send email if offer was not previously accepted (no emails for canceling accepted offers)
+    if (offer.status !== 'accepted') {
+      sendOfferEmail('declined', updatedOffer, offer.listing, offer.listing.profiles, offer.buyer).catch(err =>
+        console.error('Email send error (non-fatal):', err)
+      );
+    }
     
     return c.json({ offer: updatedOffer });
   } catch (error) {

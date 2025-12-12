@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { supabase } from '../utils/supabase/client';
 
 interface MakeOfferModalProps {
   listing: any;
@@ -24,9 +25,6 @@ export default function MakeOfferModal({ listing, user, onClose, onSuccess }: Ma
     }).format(price);
   };
 
-  const minOffer = listing.price * 0.1;
-  const maxOffer = listing.price;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -38,12 +36,7 @@ export default function MakeOfferModal({ listing, user, onClose, onSuccess }: Ma
       return;
     }
 
-    if (offerAmount < minOffer) {
-      setError(`Minimum offer is ${formatPrice(minOffer)} (10% of asking price)`);
-      return;
-    }
-
-    if (offerAmount > maxOffer) {
+    if (offerAmount > listing.price) {
       setError('Offer cannot exceed the asking price');
       return;
     }
@@ -51,7 +44,7 @@ export default function MakeOfferModal({ listing, user, onClose, onSuccess }: Ma
     setLoading(true);
 
     try {
-      const session = await user?.getSession?.();
+      const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
 
       const response = await fetch(
@@ -90,8 +83,8 @@ export default function MakeOfferModal({ listing, user, onClose, onSuccess }: Ma
   const percentage = amount ? Math.round((parseFloat(amount) / listing.price) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl">Make an Offer</h2>
           <button
@@ -120,9 +113,6 @@ export default function MakeOfferModal({ listing, user, onClose, onSuccess }: Ma
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0"
-                min={minOffer}
-                max={maxOffer}
-                step="1"
                 required
               />
             </div>
@@ -132,7 +122,7 @@ export default function MakeOfferModal({ listing, user, onClose, onSuccess }: Ma
               </p>
             )}
             <p className="text-xs text-gray-500 mt-1">
-              Min: {formatPrice(minOffer)} • Max: {formatPrice(maxOffer)}
+              Max: {formatPrice(listing.price)}
             </p>
           </div>
 
@@ -146,10 +136,10 @@ export default function MakeOfferModal({ listing, user, onClose, onSuccess }: Ma
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               placeholder="Add a note to the seller..."
               rows={3}
-              maxLength={500}
+              maxLength={100}
             />
             <p className="text-xs text-gray-500 mt-1">
-              {message.length}/500 characters
+              {message.length}/100 characters
             </p>
           </div>
 
