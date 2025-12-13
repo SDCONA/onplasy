@@ -1,15 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, X, Check, ArrowRightLeft } from 'lucide-react';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import ConfirmModal from './ConfirmModal';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  `https://${projectId}.supabase.co`,
-  publicAnonKey
-);
+import { supabase } from '../utils/supabase/client';
 
 interface OfferCardProps {
   offer: any;
