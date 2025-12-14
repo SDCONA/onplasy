@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Plus, RefreshCw, Edit, Trash2, Archive, Search, X, CheckSquare, Square } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw, Edit, Trash2, Archive, Search, X, CheckSquare, Square, Grid, List } from 'lucide-react';
 import { projectId } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { publicAnonKey } from '../utils/supabase/info';
@@ -36,6 +36,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showBulkRenewModal, setShowBulkRenewModal] = useState(false);
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Filtered listings based on search query
   const filteredActiveListings = activeListings.filter(listing => {
@@ -498,6 +499,32 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
           </div>
         </div>
 
+        {/* View Toggle */}
+        <div className="mb-6 flex justify-end">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1 flex gap-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-4 py-2 rounded flex items-center gap-2 transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Grid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-4 py-2 rounded flex items-center gap-2 transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -516,39 +543,56 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredActiveListings.map((listing) => (
-                  <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm">
-                    <ListingCard listing={listing} user={user} />
-                    <div className="mt-4 space-y-2">
-                      <div className="flex justify-between text-gray-600 mb-2">
-                        <span>{listing.views} {t.myListings.views}</span>
-                        <span>{getTimeRemaining(listing.expires_at)}</span>
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {filteredActiveListings.map((listing) => (
+                    <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm">
+                      <ListingCard listing={listing} user={user} />
+                      <div className="mt-4">
+                        <div className="flex justify-between text-gray-600 mb-2">
+                          <span>{listing.views} {t.myListings.views}</span>
+                          <span>{getTimeRemaining(listing.expires_at)}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <Link
+                            to={`/edit-listing/${listing.id}`}
+                            className="px-3 py-3 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 flex items-center justify-center"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </Link>
+                          <button
+                            onClick={() => openArchiveModal(listing.id)}
+                            className="px-3 py-3 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 flex items-center justify-center"
+                          >
+                            <Archive className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(listing.id)}
+                            className="px-3 py-3 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 flex items-center justify-center"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
-                      <Link
-                        to={`/edit-listing/${listing.id}`}
-                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
-                      >
-                        <Edit className="w-4 h-4" />
-                        <span>{t.common.edit}</span>
-                      </Link>
-                      <Link
-                        to={`/listing/${listing.id}`}
-                        className="w-full px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 text-center block"
-                      >
-                        {t.myListings.viewDetails}
-                      </Link>
-                      <button
-                        onClick={() => openArchiveModal(listing.id)}
-                        className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
-                      >
-                        <Archive className="w-4 h-4" />
-                        <span>Archive</span>
-                      </button>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredActiveListings.map((listing) => (
+                    <div key={listing.id} className="flex">
+                      <ListingCard 
+                        listing={listing} 
+                        user={user} 
+                        viewMode="list" 
+                        showActions={true}
+                        onEdit={(id) => window.location.href = `/edit-listing/${id}`}
+                        onArchive={(id) => openArchiveModal(id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
               {loadingMore && (
                 <div className="flex justify-center items-center py-8">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -588,58 +632,72 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowBulkRenewModal(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                      className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm"
                     >
-                      <RefreshCw className="w-4 h-4" />
                       <span>Renew</span>
                     </button>
                     <button
                       onClick={() => setShowBulkDeleteModal(true)}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                      className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm"
                     >
-                      <Trash2 className="w-4 h-4" />
                       <span>Delete</span>
                     </button>
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredArchivedListings.map((listing) => (
-                  <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm relative">
-                    <button
-                      onClick={() => toggleSelectListing(listing.id)}
-                      className="absolute top-2 left-2 z-10 p-1 bg-white rounded shadow-md hover:bg-gray-50"
-                    >
-                      {selectedListings.has(listing.id) ? (
-                        <CheckSquare className="w-5 h-5 text-blue-600" />
-                      ) : (
-                        <Square className="w-5 h-5 text-gray-400" />
-                      )}
-                    </button>
-                    <ListingCard listing={listing} user={user} />
-                    <div className="mt-4 space-y-2">
-                      <p className="text-gray-600 text-center mb-2">
-                        {t.myListings.archivedOn} {new Date(listing.archived_at).toLocaleDateString()}
-                      </p>
-                      <button
-                        onClick={() => handleRenew(listing.id)}
-                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                        <span>{t.myListings.renewFor7Days}</span>
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(listing.id)}
-                        className="w-full px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 flex items-center justify-center gap-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        <span>{t.myListings.deletePermanently}</span>
-                      </button>
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {filteredArchivedListings.map((listing) => (
+                    <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm relative">
+                      <ListingCard 
+                        listing={listing} 
+                        user={user}
+                        showCheckbox={true}
+                        isSelected={selectedListings.has(listing.id)}
+                        onToggleSelect={() => toggleSelectListing(listing.id)}
+                      />
+                      <div className="mt-4 space-y-2">
+                        <p className="text-gray-600 text-center mb-2">
+                          {t.myListings.archivedOn} {new Date(listing.archived_at).toLocaleDateString()}
+                        </p>
+                        <button
+                          onClick={() => handleRenew(listing.id)}
+                          className="w-full px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 flex items-center justify-center gap-2"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          <span>{t.myListings.renewFor7Days}</span>
+                        </button>
+                        <button
+                          onClick={() => openDeleteModal(listing.id)}
+                          className="w-full px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 flex items-center justify-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>{t.myListings.deletePermanently}</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredArchivedListings.map((listing) => (
+                    <ListingCard
+                      key={listing.id}
+                      listing={listing}
+                      user={user}
+                      viewMode="list"
+                      showActions={true}
+                      isArchived={true}
+                      showCheckbox={true}
+                      isSelected={selectedListings.has(listing.id)}
+                      onToggleSelect={() => toggleSelectListing(listing.id)}
+                      onRenew={(id) => handleRenew(id)}
+                      onDelete={(id) => openDeleteModal(id)}
+                    />
+                  ))}
+                </div>
+              )}
               {loadingMore && (
                 <div className="flex justify-center items-center py-8">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

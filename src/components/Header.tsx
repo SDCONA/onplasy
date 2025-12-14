@@ -109,7 +109,7 @@ export default function Header({ user, unreadCount = 0, offersCount = 0 }: Heade
             {/* Mobile Quick Links */}
             {user && (
               <div className="md:hidden flex items-center gap-1.5">
-                <Link to="/messages" className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                <Link to="/messages" className="relative flex items-center justify-center w-10 h-10 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all">
                   <MessageSquare className="w-6 h-6" strokeWidth={2.5} />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-md">
@@ -117,7 +117,7 @@ export default function Header({ user, unreadCount = 0, offersCount = 0 }: Heade
                     </span>
                   )}
                 </Link>
-                <Link to="/offers" className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                <Link to="/offers" className="relative flex items-center justify-center w-10 h-10 rounded-xl text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all">
                   <DollarSign className="w-6 h-6" strokeWidth={2.5} />
                   {offersCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-md">
@@ -125,10 +125,10 @@ export default function Header({ user, unreadCount = 0, offersCount = 0 }: Heade
                     </span>
                   )}
                 </Link>
-                <Link to="/saved" className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                <Link to="/saved" className="flex items-center justify-center w-10 h-10 rounded-xl text-pink-600 bg-pink-50 hover:bg-pink-100 transition-all">
                   <Heart className="w-6 h-6" strokeWidth={2.5} />
                 </Link>
-                <Link to={`/profile/${user.id}`} className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                <Link to={`/profile/${user.id}`} className="flex items-center justify-center w-10 h-10 rounded-xl text-green-600 bg-green-50 hover:bg-green-100 transition-all">
                   <User className="w-6 h-6" strokeWidth={2.5} />
                 </Link>
               </div>

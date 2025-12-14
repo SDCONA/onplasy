@@ -185,14 +185,6 @@ export default function ProfilePage({ currentUser }: ProfilePageProps) {
               {/* Quick Action Buttons - only show if viewing own profile */}
               {currentUser && currentUser.id === userId && (
                 <div className="flex flex-wrap gap-3 mt-4">
-                  <Link 
-                    to="/my-listings"
-                    state={{ from: 'profile' }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>My Listings</span>
-                  </Link>
                 </div>
               )}
             </div>

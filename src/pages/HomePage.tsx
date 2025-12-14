@@ -288,8 +288,7 @@ export default function HomePage({ user }: HomePageProps) {
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <SlidersHorizontal className="w-4 h-4" />
-              <span>{showFilters ? t.home.hideFilters : t.home.showFilters}</span>
+              <span>Filters</span>
             </button>
             
             <div className="flex gap-2 ml-auto">
@@ -303,13 +302,20 @@ export default function HomePage({ user }: HomePageProps) {
               )}
               
               {user && (
-                <button
-                  onClick={() => navigate('/create-listing')}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{t.header.createListing}</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => navigate('/my-listings')}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <span>{t.header.myListings}</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/create-listing')}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <span>{t.header.createListing}</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -322,9 +328,8 @@ export default function HomePage({ user }: HomePageProps) {
                 <div className="flex justify-end">
                   <button
                     onClick={clearAllFilters}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm"
                   >
-                    <X className="w-4 h-4" />
                     <span>Clear All Filters</span>
                   </button>
                 </div>
