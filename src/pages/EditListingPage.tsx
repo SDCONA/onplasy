@@ -713,7 +713,7 @@ export default function EditListingPage({ user }: EditListingPageProps) {
                     {/* Show skeleton loaders while uploading */}
                     {uploadingImage && (
                       <>
-                        {[...Array(Math.min(4 - images.length, 10 - images.length))].map((_, index) => (
+                        {[...Array(Math.max(0, Math.min(4 - images.length, 10 - images.length)))].map((_, index) => (
                           <div 
                             key={`skeleton-${index}`} 
                             className="relative aspect-square bg-gray-200 rounded-lg overflow-hidden animate-pulse"
