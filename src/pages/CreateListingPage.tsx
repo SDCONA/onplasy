@@ -251,10 +251,45 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
         return;
       }
 
+      // Track create interaction
+      if (data.listing && categoryId) {
+        const categorySlug = categories.find(c => c.id === categoryId)?.slug;
+        if (categorySlug) {
+          trackCreate(data.listing.id, categorySlug);
+        }
+      }
+
       navigate(`/listing/${data.listing.id}`);
     } catch (err) {
       setError('An error occurred while creating the listing');
       setLoading(false);
+    }
+  };
+
+  const trackCreate = async (listingId: string, category: string) => {
+    if (!user) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/track-interaction`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            category,
+            interactionType: 'create',
+            listingId
+          })
+        }
+      );
+    } catch (error) {
+      console.error('Failed to track create:', error);
     }
   };
 

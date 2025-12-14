@@ -93,6 +93,17 @@ export default function HomePage({ user }: HomePageProps) {
   const fetchListings = async () => {
     setLoading(true);
     try {
+      // Check if filters are active (no personalization with filters)
+      const hasActiveFilters = selectedCategory !== 'all' || 
+                               selectedSubcategory !== 'all' || 
+                               searchQuery || 
+                               zipcode || 
+                               listingType !== 'all' ||
+                               condition !== 'all' ||
+                               datePosted !== 'all' ||
+                               minPrice ||
+                               maxPrice;
+
       const params = new URLSearchParams({
         status: 'active',
         ...(selectedCategory !== 'all' && { category: selectedCategory }),
@@ -108,18 +119,28 @@ export default function HomePage({ user }: HomePageProps) {
         ...(condition !== 'all' && { condition }),
         ...(datePosted !== 'all' && { datePosted }),
         offset: offset.toString(),
-        limit: '20'
+        limit: '20',
+        // Enable personalization when browsing without filters and user is logged in
+        ...(!hasActiveFilters && user && { personalized: 'true' })
       });
 
       console.log('Fetching listings with params:', params.toString());
 
+      const headers: any = {
+        'Authorization': `Bearer ${publicAnonKey}`
+      };
+      
+      // Add user token if logged in for personalization
+      if (user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+      }
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/listings?${params}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`
-          }
-        }
+        { headers }
       );
       const data = await response.json();
       console.log('Listings response:', data);
@@ -132,11 +153,46 @@ export default function HomePage({ user }: HomePageProps) {
         });
         setHasMore(data.hasMore ?? false); // Use backend's hasMore value
       }
+      
+      // Track search if user searched for something
+      if (searchQuery && user) {
+        trackSearch(searchQuery);
+      }
     } catch (error) {
       console.error('Failed to fetch listings:', error);
     } finally {
       setLoading(false);
       setLoadingMore(false);
+    }
+  };
+
+  const trackSearch = async (query: string) => {
+    if (!user) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      // Determine category from search or selected category
+      const category = selectedCategory !== 'all' ? selectedCategory : 'general';
+
+      await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/track-interaction`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            category,
+            interactionType: 'search',
+            listingId: null
+          })
+        }
+      );
+    } catch (error) {
+      console.error('Failed to track search:', error);
     }
   };
 

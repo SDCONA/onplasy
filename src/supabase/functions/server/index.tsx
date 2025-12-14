@@ -6,6 +6,13 @@ import { verifyRecaptcha } from './recaptcha.ts';
 import { getOptimizedListings, geocodeAndSave } from './listings_optimized.tsx';
 import * as kv from './kv_store.tsx';
 import { sendOfferEmail } from './offers.tsx';
+import {
+  trackInteraction,
+  getUserInterests,
+  getTotalInteractionCount,
+  resetUserPersonalization,
+  getPersonalizedListingOrder,
+} from './personalization.tsx';
 
 const app = new Hono();
 
@@ -389,6 +396,7 @@ app.get('/make-server-5dec7914/listings', async (c) => {
     const datePosted = c.req.query('datePosted'); // Date filter (24h, week, month, all)
     const limit = parseInt(c.req.query('limit') || '30'); // Pagination limit
     const offset = parseInt(c.req.query('offset') || '0'); // Pagination offset
+    const personalized = c.req.query('personalized') === 'true'; // Enable personalization
     
     // Use optimized listing fetcher
     const result = await getOptimizedListings({
@@ -409,6 +417,27 @@ app.get('/make-server-5dec7914/listings', async (c) => {
       limit,
       offset
     });
+    
+    // Apply personalization if requested and user is authenticated
+    if (personalized && offset === 0) {
+      const user = await getAuthUser(c.req.raw);
+      if (user && !category && !subcategory && !search && !zipcode) {
+        // Only personalize when no filters are active (browsing homepage)
+        const interactionCount = await getTotalInteractionCount(user.id);
+        
+        if (interactionCount >= 5) {
+          const listingIds = result.listings.map((l: any) => l.id);
+          const personalizedOrder = await getPersonalizedListingOrder(user.id, listingIds);
+          
+          // Reorder listings based on personalized order
+          const orderedListings = personalizedOrder
+            .map(id => result.listings.find((l: any) => l.id === id))
+            .filter(Boolean);
+          
+          result.listings = orderedListings;
+        }
+      }
+    }
     
     return c.json(result);
   } catch (error) {
@@ -2705,6 +2734,90 @@ app.put('/make-server-5dec7914/offers/mark-read/:listingId', async (c) => {
   } catch (error) {
     console.error('Mark offers as read exception:', error);
     return c.json({ error: 'Failed to mark offers as read' }, 500);
+  }
+});
+
+// ===== PERSONALIZATION ENDPOINTS =====
+
+// Track user interaction
+app.post('/make-server-5dec7914/track-interaction', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const { category, interactionType, listingId } = await c.req.json();
+
+    if (!category || !interactionType) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    const result = await trackInteraction(user.id, category, interactionType, listingId);
+
+    if (!result.success) {
+      return c.json({ error: 'Failed to track interaction' }, 500);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Track interaction exception:', error);
+    return c.json({ error: 'Failed to track interaction' }, 500);
+  }
+});
+
+// Get user interests
+app.get('/make-server-5dec7914/user-interests', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const interests = await getUserInterests(user.id);
+    const interactionCount = await getTotalInteractionCount(user.id);
+
+    return c.json({ interests, interactionCount });
+  } catch (error) {
+    console.error('Get user interests exception:', error);
+    return c.json({ error: 'Failed to fetch user interests' }, 500);
+  }
+});
+
+// Get personalization data
+app.get('/make-server-5dec7914/personalization-data', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const interests = await getUserInterests(user.id);
+    const interactionCount = await getTotalInteractionCount(user.id);
+
+    return c.json({ 
+      data: {
+        interests, 
+        interactionCount,
+        personalizationActive: interactionCount >= 5
+      }
+    });
+  } catch (error) {
+    console.error('Get personalization data exception:', error);
+    return c.json({ error: 'Failed to fetch personalization data' }, 500);
+  }
+});
+
+// Reset user personalization
+app.post('/make-server-5dec7914/reset-personalization', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const result = await resetUserPersonalization(user.id);
+
+    if (!result.success) {
+      return c.json({ error: 'Failed to reset personalization' }, 500);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Reset personalization exception:', error);
+    return c.json({ error: 'Failed to reset personalization' }, 500);
   }
 });
 

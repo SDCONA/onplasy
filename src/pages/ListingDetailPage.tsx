@@ -72,11 +72,43 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
       const data = await response.json();
       if (data.listing) {
         setListing(data.listing);
+        
+        // Track view interaction
+        if (user && data.listing.category) {
+          trackView(data.listing.id, data.listing.category);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch listing:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const trackView = async (listingId: string, category: string) => {
+    if (!user) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/track-interaction`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            category,
+            interactionType: 'view',
+            listingId
+          })
+        }
+      );
+    } catch (error) {
+      console.error('Failed to track view:', error);
     }
   };
 

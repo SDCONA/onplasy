@@ -158,11 +158,43 @@ export default function ConversationPage({ user }: ConversationPageProps) {
       if (response.ok) {
         setNewMessage('');
         await fetchMessages();
+        
+        // Track message interaction if we have listing info
+        if (listing && listing.category) {
+          trackMessage(listing.id, listing.category);
+        }
       }
     } catch (error) {
       console.error('Failed to send message:', error);
     } finally {
       setSending(false);
+    }
+  };
+
+  const trackMessage = async (listingId: string, category: string) => {
+    if (!user) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/track-interaction`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            category,
+            interactionType: 'message',
+            listingId
+          })
+        }
+      );
+    } catch (error) {
+      console.error('Failed to track message:', error);
     }
   };
 

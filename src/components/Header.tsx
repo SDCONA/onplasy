@@ -49,7 +49,7 @@ export default function Header({ user, unreadCount = 0, offersCount = 0 }: Heade
           <Link to="/" className="flex items-center">
             <h1>
               <span className="text-green-600 font-bold">On</span>
-              <span className="text-blue-600">Plasy</span>
+              <span className="text-blue-600 font-bold">Plasy</span>
             </h1>
           </Link>
 

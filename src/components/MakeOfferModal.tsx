@@ -70,6 +70,11 @@ export default function MakeOfferModal({ listing, user, onClose, onSuccess }: Ma
         return;
       }
 
+      // Track offer interaction
+      if (listing && listing.category) {
+        trackOffer(listing.id, listing.category);
+      }
+
       onSuccess();
       onClose();
     } catch (err) {
@@ -77,6 +82,33 @@ export default function MakeOfferModal({ listing, user, onClose, onSuccess }: Ma
       setError('Failed to submit offer. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const trackOffer = async (listingId: string, category: string) => {
+    if (!user) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/track-interaction`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            category,
+            interactionType: 'offer',
+            listingId
+          })
+        }
+      );
+    } catch (error) {
+      console.error('Failed to track offer:', error);
     }
   };
 

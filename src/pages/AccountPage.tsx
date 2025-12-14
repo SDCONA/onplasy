@@ -36,6 +36,11 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
   const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true);
   const [prefsLoading, setPrefsLoading] = useState(false);
 
+  // Personalization
+  const [personalizationData, setPersonalizationData] = useState<any>(null);
+  const [personalizationLoading, setPersonalizationLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+
   // Modal state for password change feedback
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
@@ -71,6 +76,7 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       hasFetchedProfile.current = true;
       fetchProfile();
       fetchNotificationPreferences();
+      fetchPersonalizationData();
     }
   }, [user?.id]); // Re-run when user ID changes
 
@@ -187,6 +193,42 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
     } catch (error) {
       console.error('Failed to fetch notification preferences:', error);
       toast.error('Failed to load notification preferences');
+    }
+  };
+
+  const fetchPersonalizationData = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to fetch personalization data');
+        return;
+      }
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/personalization-data`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Personalization data fetch failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        toast.error('Failed to load personalization data');
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Personalization data fetched:', data.data);
+      if (data.data) {
+        setPersonalizationData(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch personalization data:', error);
+      toast.error('Failed to load personalization data');
     }
   };
 
@@ -445,6 +487,47 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
       toast.error('Failed to update notification preferences');
     } finally {
       setPrefsLoading(false);
+    }
+  };
+
+  const handleResetPersonalization = async () => {
+    if (!confirm('Are you sure you want to reset your personalization data? This will clear your browsing history and category preferences.')) {
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to reset personalization');
+        setResetLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/reset-personalization`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Personalization data reset successfully');
+        // Refresh personalization data
+        fetchPersonalizationData();
+      } else {
+        toast.error(`Failed to reset personalization: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Reset personalization error:', error);
+      toast.error('Failed to reset personalization');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -750,6 +833,83 @@ export default function AccountPage({ user, onUserUpdate }: AccountPageProps) {
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800">
                   <strong>Note:</strong> Email notifications are sent every 30 minutes if you have new unread messages. You will only be notified once per message.
+                </p>
+              </div>
+            </div>
+
+            <h2 className="mt-8 mb-6">Personalization</h2>
+
+            <div className="space-y-4">
+              {/* Personalization Status */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-gray-900 mb-1">Personalized Homepage</h3>
+                    <p className="text-sm text-gray-600">
+                      {personalizationData?.personalizationActive 
+                        ? `We're personalizing your homepage based on your interests` 
+                        : `Browse listings to get personalized recommendations`
+                      }
+                    </p>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-sm ${
+                    personalizationData?.personalizationActive
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-200 text-gray-700'
+                  }`}>
+                    {personalizationData?.personalizationActive ? 'Active' : 'Inactive'}
+                  </div>
+                </div>
+                
+                {personalizationData && (
+                  <div className="space-y-2">
+                    <div className="text-sm text-gray-600">
+                      <strong>Total interactions:</strong> {personalizationData.interactionCount || 0}
+                      {personalizationData.interactionCount < 5 && (
+                        <span className="text-gray-500"> ({5 - personalizationData.interactionCount} more needed for personalization)</span>
+                      )}
+                    </div>
+                    
+                    {personalizationData.interests && personalizationData.interests.length > 0 && (
+                      <div className="text-sm">
+                        <strong className="text-gray-600">Top interests:</strong>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {personalizationData.interests.slice(0, 5).map((interest: any, idx: number) => (
+                            <div key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs capitalize">
+                              {interest.category} ({interest.score}pts)
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Reset Button */}
+              {personalizationData?.interactionCount > 0 && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-gray-900 mb-1">Reset Personalization Data</h3>
+                      <p className="text-sm text-gray-600 mb-3">
+                        This will clear all your browsing history and category preferences. Your homepage will show random listings until you interact with 5+ listings again.
+                      </p>
+                      <button
+                        onClick={handleResetPersonalization}
+                        disabled={resetLoading}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      >
+                        {resetLoading ? 'Resetting...' : 'Reset Personalization'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>How it works:</strong> After 5 interactions (views, searches, messages, favorites, offers, or listings created), we'll show you 90% listings from your top category and 10% discovery listings.
                 </p>
               </div>
             </div>

@@ -56,6 +56,11 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
           }
         );
         setIsSaved(true);
+        
+        // Track favorite interaction when saving
+        if (listing && listing.category) {
+          trackFavorite(listing.id, listing.category);
+        }
       }
       
       if (onUpdate) onUpdate();
@@ -63,6 +68,33 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
       console.error('Failed to save listing:', error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const trackFavorite = async (listingId: string, category: string) => {
+    if (!user) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/track-interaction`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            category,
+            interactionType: 'favorite',
+            listingId
+          })
+        }
+      );
+    } catch (error) {
+      console.error('Failed to track favorite:', error);
     }
   };
 
