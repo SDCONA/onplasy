@@ -147,42 +147,62 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      for (let i = 0; i < files.length && images.length + i < 10; i++) {
+      const maxToUpload = Math.min(files.length, 10 - images.length);
+
+      for (let i = 0; i < maxToUpload; i++) {
         const file = files[i];
         
-        // Process image on client side: resize, strip metadata, compress
-        console.log(`Original image: ${formatBytes(file.size)}`);
-        const processedFile = await processImage(file, {
-          maxWidth: 1200,
-          maxHeight: 1200,
-          quality: 0.92
-        });
-        console.log(`Processed image: ${formatBytes(processedFile.size)} (${getSizeReduction(file.size, processedFile.size)} reduction)`);
-        
-        const formData = new FormData();
-        formData.append('file', processedFile);
-
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/upload-image`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            },
-            body: formData
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          setError(data.error || 'Failed to upload image');
+        // Validate file type - only allow static images (no GIFs)
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type.toLowerCase())) {
+          console.log(`Skipping unsupported file type: ${file.name} (${file.type})`);
           continue;
         }
 
-        // Server returns single URL for listing images
-        if (data.url) {
-          setImages(prev => [...prev, data.url]);
+        // Validate file size (max 10MB before processing)
+        if (file.size > 10 * 1024 * 1024) {
+          console.log(`Skipping large file: ${file.name} (${formatBytes(file.size)})`);
+          continue;
+        }
+
+        try {
+          // Process image on client side: resize, strip metadata, compress
+          console.log(`Original image: ${formatBytes(file.size)}`);
+          const processedFile = await processImage(file, {
+            maxWidth: 1200,
+            maxHeight: 1200,
+            quality: 0.92
+          });
+          console.log(`Processed image: ${formatBytes(processedFile.size)} (${getSizeReduction(file.size, processedFile.size)} reduction)`);
+          
+          const formData = new FormData();
+          formData.append('file', processedFile);
+
+          const response = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/upload-image`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              body: formData
+            }
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            console.error(`Upload failed for ${file.name}:`, data.error);
+            continue;
+          }
+
+          // Server returns single URL for listing images
+          if (data.url) {
+            setImages(prev => [...prev, data.url]);
+          }
+        } catch (imageError) {
+          console.error(`Error processing ${file.name}:`, imageError);
+          continue;
         }
       }
     } catch (err) {
@@ -602,7 +622,7 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
               </label>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 multiple
                 onChange={handleFileUpload}
                 disabled={uploadingImage || images.length >= 10}
