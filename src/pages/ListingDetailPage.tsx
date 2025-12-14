@@ -47,13 +47,6 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
   // Get the "from" location if navigated from conversation
   const fromLocation = (location.state as any)?.from;
 
-  // Redirect to sign-in if user is not logged in
-  useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-    }
-  }, [user, navigate]);
-
   useEffect(() => {
     fetchListing();
   }, [id]);
@@ -121,6 +114,14 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
     // Create conversation ID
     const conversationId = [user.id, listing.user_id].sort().join('-') + '-' + listing.id;
     navigate(`/messages/${conversationId}?listingId=${listing.id}&recipientId=${listing.user_id}`);
+  };
+
+  const handleMakeOffer = () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    setShowMakeOfferModal(true);
   };
 
   const formatPrice = (price: number) => {
@@ -328,10 +329,10 @@ export default function ListingDetailPage({ user }: ListingDetailPageProps) {
                 <p className="text-gray-500">{listing.views} views</p>
               </div>
 
-              {user?.id !== listing.user_id && listing.status === 'active' && (
+              {(!user || user?.id !== listing.user_id) && listing.status === 'active' && (
                 <div className="space-y-3">
                   <button
-                    onClick={() => setShowMakeOfferModal(true)}
+                    onClick={handleMakeOffer}
                     className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
                   >
                     <DollarSign className="w-5 h-5" />

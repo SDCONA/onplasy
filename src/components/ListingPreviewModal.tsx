@@ -143,6 +143,14 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
     navigate(`/messages/${conversationId}?listingId=${listing.id}&recipientId=${listing.user_id}`);
   };
 
+  const handleMakeOffer = () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    setShowMakeOfferModal(true);
+  };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -533,10 +541,10 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
                   </button>
                 </div>
 
-                {user?.id !== listing.user_id && (
+                {(!user || user?.id !== listing.user_id) && (
                   <div className="space-y-3">
                     <button
-                      onClick={() => setShowMakeOfferModal(true)}
+                      onClick={handleMakeOffer}
                       className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
                     >
                       <DollarSign className="w-5 h-5" />
