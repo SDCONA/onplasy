@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Plus, RefreshCw, Edit, Trash2, Archive, Search, X } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw, Edit, Trash2, Archive, Search, X, CheckSquare, Square } from 'lucide-react';
 import { projectId } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { publicAnonKey } from '../utils/supabase/info';
@@ -32,6 +32,10 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [selectedListings, setSelectedListings] = useState<Set<string>>(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [showBulkRenewModal, setShowBulkRenewModal] = useState(false);
+  const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
 
   // Filtered listings based on search query
   const filteredActiveListings = activeListings.filter(listing => {
@@ -313,6 +317,111 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
     setListingToDelete(null);
   };
 
+  // Bulk selection functions
+  const toggleSelectListing = (listingId: string) => {
+    const newSelected = new Set(selectedListings);
+    if (newSelected.has(listingId)) {
+      newSelected.delete(listingId);
+    } else {
+      newSelected.add(listingId);
+    }
+    setSelectedListings(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedListings.size === filteredArchivedListings.length) {
+      setSelectedListings(new Set());
+    } else {
+      setSelectedListings(new Set(filteredArchivedListings.map(l => l.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkActionInProgress(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const deletePromises = Array.from(selectedListings).map(listingId =>
+        fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/listings/${listingId}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        )
+      );
+
+      const results = await Promise.all(deletePromises);
+      const failedCount = results.filter(r => !r.ok).length;
+
+      if (failedCount > 0) {
+        alert(`Failed to delete ${failedCount} listing(s). Please try again.`);
+      }
+
+      // Reset and refetch
+      setActiveListings([]);
+      setArchivedListings([]);
+      setActiveOffset(0);
+      setArchivedOffset(0);
+      setHasMoreActive(true);
+      setHasMoreArchived(true);
+      setSelectedListings(new Set());
+      setShowBulkDeleteModal(false);
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Failed to bulk delete listings:', error);
+      alert('Failed to delete listings. Please try again.');
+    } finally {
+      setBulkActionInProgress(false);
+    }
+  };
+
+  const handleBulkRenew = async () => {
+    setBulkActionInProgress(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const renewPromises = Array.from(selectedListings).map(listingId =>
+        fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/listings/${listingId}/renew`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        )
+      );
+
+      const results = await Promise.all(renewPromises);
+      const failedCount = results.filter(r => !r.ok).length;
+
+      if (failedCount > 0) {
+        alert(`Failed to renew ${failedCount} listing(s). Please try again.`);
+      }
+
+      // Reset and refetch
+      setActiveListings([]);
+      setArchivedListings([]);
+      setActiveOffset(0);
+      setArchivedOffset(0);
+      setHasMoreActive(true);
+      setHasMoreArchived(true);
+      setSelectedListings(new Set());
+      setShowBulkRenewModal(false);
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Failed to bulk renew listings:', error);
+      alert('Failed to renew listings. Please try again.');
+    } finally {
+      setBulkActionInProgress(false);
+    }
+  };
+
   // Get the return path from location state, default to home
   const returnPath = (location.state as any)?.from === 'profile' ? `/profile/${user?.id}` : '/';
 
@@ -434,7 +543,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
                         className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
                       >
                         <Archive className="w-4 h-4" />
-                        <span>{t.common.delete}</span>
+                        <span>Archive</span>
                       </button>
                     </div>
                   </div>
@@ -455,9 +564,59 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
             </div>
           ) : (
             <>
+              {/* Bulk Actions Toolbar */}
+              <div className="bg-white rounded-lg shadow-sm p-4 mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="flex items-center gap-2 text-gray-700 hover:text-blue-600"
+                  >
+                    {selectedListings.size === filteredArchivedListings.length && filteredArchivedListings.length > 0 ? (
+                      <CheckSquare className="w-5 h-5" />
+                    ) : (
+                      <Square className="w-5 h-5" />
+                    )}
+                    <span>Select All</span>
+                  </button>
+                  {selectedListings.size > 0 && (
+                    <span className="text-gray-600">
+                      {selectedListings.size} selected
+                    </span>
+                  )}
+                </div>
+                {selectedListings.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowBulkRenewModal(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Renew</span>
+                    </button>
+                    <button
+                      onClick={() => setShowBulkDeleteModal(true)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredArchivedListings.map((listing) => (
-                  <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm">
+                  <div key={listing.id} className="bg-white rounded-lg p-4 shadow-sm relative">
+                    <button
+                      onClick={() => toggleSelectListing(listing.id)}
+                      className="absolute top-2 left-2 z-10 p-1 bg-white rounded shadow-md hover:bg-gray-50"
+                    >
+                      {selectedListings.has(listing.id) ? (
+                        <CheckSquare className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <Square className="w-5 h-5 text-gray-400" />
+                      )}
+                    </button>
                     <ListingCard listing={listing} user={user} />
                     <div className="mt-4 space-y-2">
                       <p className="text-gray-600 text-center mb-2">
@@ -508,7 +667,7 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
                   onClick={confirmArchive}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  {t.common.delete}
+                  Archive
                 </button>
               </div>
             </div>
@@ -533,6 +692,68 @@ export default function MyListingsPage({ user }: MyListingsPageProps) {
                   className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
                   {t.myListings.deletePermanently}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Renew Modal */}
+        {showBulkRenewModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4">
+              <h2 className="mb-4">Renew {selectedListings.size} Listing{selectedListings.size > 1 ? 's' : ''}?</h2>
+              <p className="text-gray-600 mb-6">
+                This will renew the selected listings for 7 more days and move them back to active status.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowBulkRenewModal(false)}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  disabled={bulkActionInProgress}
+                >
+                  {t.common.cancel}
+                </button>
+                <button
+                  onClick={handleBulkRenew}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  disabled={bulkActionInProgress}
+                >
+                  {bulkActionInProgress && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  )}
+                  <span>Renew All</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Delete Modal */}
+        {showBulkDeleteModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md mx-4">
+              <h2 className="mb-4 text-red-600">Delete {selectedListings.size} Listing{selectedListings.size > 1 ? 's' : ''}?</h2>
+              <p className="text-gray-600 mb-6">
+                This action cannot be undone. The selected listings will be permanently deleted.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowBulkDeleteModal(false)}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  disabled={bulkActionInProgress}
+                >
+                  {t.common.cancel}
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                  disabled={bulkActionInProgress}
+                >
+                  {bulkActionInProgress && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  )}
+                  <span>Delete All</span>
                 </button>
               </div>
             </div>

@@ -652,71 +652,74 @@ export default function EditListingPage({ user }: EditListingPageProps) {
                 </label>
               </div>
 
-              {images.length > 0 && (
-                <div className="grid grid-cols-4 gap-2">
-                  {images.slice(0, 4).map((img, index) => (
-                    <div 
-                      key={index} 
-                      onClick={() => {
-                        setSelectedImageIndex(index);
-                        setShowReorderModal(true);
-                      }}
-                      className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer transition-all hover:opacity-80"
-                    >
-                      <img
-                        src={img}
-                        alt={`Upload ${index + 1}`}
-                        className="w-full h-full object-contain pointer-events-none"
-                      />
-                      {index === 3 && images.length > 4 && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-white/50">
-                          <p className="text-gray-900 text-lg font-medium">
-                            +{images.length - 4}
-                          </p>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveImage(index);
+              {(images.length > 0 || uploadingImage) && (
+                <>
+                  <div className="grid grid-cols-4 gap-2">
+                    {/* Show all uploaded images */}
+                    {images.slice(0, 4).map((img, index) => (
+                      <div 
+                        key={index} 
+                        onClick={() => {
+                          setSelectedImageIndex(index);
+                          setShowReorderModal(true);
                         }}
-                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 z-10"
+                        className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer transition-all hover:opacity-80"
                       >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Reorder Button */}
-              {images.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setShowReorderModal(true)}
-                  className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  <ChevronUp className="w-4 h-4" />
-                  <ChevronDown className="w-4 h-4" />
-                  <span>Reorder Images</span>
-                </button>
-              )}
-
-              {/* Show skeleton loaders while uploading */}
-              {uploadingImage && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {[...Array(Math.min(4, 10 - images.length))].map((_, index) => (
-                    <div 
-                      key={`skeleton-${index}`} 
-                      className="relative h-32 bg-gray-200 rounded-lg overflow-hidden animate-pulse"
-                    >
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                        <img
+                          src={img}
+                          alt={`Upload ${index + 1}`}
+                          className="w-full h-full object-contain pointer-events-none"
+                        />
+                        {index === 3 && images.length > 4 && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-white/50">
+                            <p className="text-gray-900 text-lg font-medium">
+                              +{images.length - 4}
+                            </p>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage(index);
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 z-10"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                    
+                    {/* Show skeleton loaders while uploading */}
+                    {uploadingImage && (
+                      <>
+                        {[...Array(Math.min(4 - images.length, 10 - images.length))].map((_, index) => (
+                          <div 
+                            key={`skeleton-${index}`} 
+                            className="relative aspect-square bg-gray-200 rounded-lg overflow-hidden animate-pulse"
+                          >
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Reorder Button */}
+                  {images.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowReorderModal(true)}
+                      className="mt-3 w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                      <ChevronDown className="w-4 h-4" />
+                      <span>Reorder Images</span>
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

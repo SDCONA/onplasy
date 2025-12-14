@@ -20,7 +20,7 @@ export default function HomePage({ user }: HomePageProps) {
   const [listingType, setListingType] = useState<'all' | 'sale' | 'rent'>('all');
   const [locationSearch, setLocationSearch] = useState('');
   const [zipcode, setZipcode] = useState('');
-  const [distance, setDistance] = useState(50);
+  const [distance, setDistance] = useState(1);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [condition, setCondition] = useState('all');
@@ -159,6 +159,35 @@ export default function HomePage({ user }: HomePageProps) {
   const isRealEstate = selectedCategoryObj?.slug === 'real-estate';
   const isServices = selectedCategoryObj?.slug === 'services';
 
+  const clearAllFilters = () => {
+    setSelectedCategory('all');
+    setSelectedSubcategory('all');
+    setSearchQuery('');
+    setSortBy('random');
+    setListingType('all');
+    setLocationSearch('');
+    setZipcode('');
+    setDistance(1);
+    setMinPrice('');
+    setMaxPrice('');
+    setCondition('all');
+    setDatePosted('all');
+  };
+
+  const hasActiveFilters = 
+    selectedCategory !== 'all' ||
+    selectedSubcategory !== 'all' ||
+    searchQuery !== '' ||
+    sortBy !== 'random' ||
+    listingType !== 'all' ||
+    locationSearch !== '' ||
+    zipcode !== '' ||
+    distance !== 1 ||
+    minPrice !== '' ||
+    maxPrice !== '' ||
+    condition !== 'all' ||
+    datePosted !== 'all';
+
   useEffect(() => {
     const currentRef = loadMoreRef.current;
     if (currentRef && !loadingMore) {
@@ -232,6 +261,19 @@ export default function HomePage({ user }: HomePageProps) {
           {/* Collapsible Filters */}
           {showFilters && (
             <div className="mt-4 space-y-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+              {/* Clear All Filters Button */}
+              {hasActiveFilters && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={clearAllFilters}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Clear All Filters</span>
+                  </button>
+                </div>
+              )}
+
               {/* Sort By */}
               <div>
                 <label className="block text-sm text-gray-700 mb-2">{t.home.sortBy}</label>
