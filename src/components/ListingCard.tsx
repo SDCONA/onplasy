@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, Star, Share2 } from 'lucide-react';
+import { Heart, Star, Share2, Bed, Bath, Maximize, MapPin } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
@@ -113,6 +113,24 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
     return null;
   };
 
+  const getRealEstateDetails = (listing: any) => {
+    // Check if details are attached directly (from single listing fetch) or in real_estate_details (from list fetch)
+    const details = listing.real_estate_details 
+      ? (Array.isArray(listing.real_estate_details) ? listing.real_estate_details[0] : listing.real_estate_details)
+      : listing;
+      
+    // If we're falling back to 'listing' (legacy/direct props), ensure we don't return the listing object if it doesn't have the fields
+    if (details === listing && !listing.bedrooms && !listing.bathrooms && !listing.square_feet) {
+      return null;
+    }
+    
+    return details;
+  };
+
+  const reDetails = getRealEstateDetails(listing);
+  // Safely get category slug (can be object or array depending on Supabase query)
+  const categorySlug = listing.categories?.slug || (Array.isArray(listing.categories) ? listing.categories[0]?.slug : null);
+
   return (
     <div className="group">
       <div 
@@ -165,7 +183,43 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
           
           <p className="text-blue-600 mb-2">
             {formatPrice(listing.price)}
+            {reDetails?.listing_type === 'rent' && <span className="text-sm text-gray-500">/mo</span>}
           </p>
+
+          {/* Real Estate Specific Details */}
+          {categorySlug === 'real-estate' && reDetails && (
+            <div className="space-y-2 mb-3">
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                {reDetails.bedrooms > 0 && (
+                  <div className="flex items-center gap-1" title="Bedrooms">
+                    <Bed className="w-4 h-4" />
+                    <span>{reDetails.bedrooms}</span>
+                  </div>
+                )}
+                {reDetails.bathrooms > 0 && (
+                  <div className="flex items-center gap-1" title="Bathrooms">
+                    <Bath className="w-4 h-4" />
+                    <span>{reDetails.bathrooms}</span>
+                  </div>
+                )}
+                {reDetails.square_feet > 0 && (
+                  <div className="flex items-center gap-1" title="Square Feet">
+                    <Maximize className="w-4 h-4" />
+                    <span>{reDetails.square_feet}</span>
+                  </div>
+                )}
+              </div>
+              
+              {(reDetails.city || reDetails.state) && (
+                <div className="flex items-center gap-1 text-xs text-gray-500 truncate">
+                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                  <span>
+                    {[reDetails.address, reDetails.city, reDetails.state].filter(Boolean).join(', ')}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {listing.profiles && (
             <div className="flex items-center gap-2 text-gray-600">

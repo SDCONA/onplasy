@@ -481,6 +481,37 @@ export const en = {
     removed: "Removed from favorites",
   },
 
+  // My Listings
+  myListings: {
+    back: "Back",
+    newListing: "New Listing",
+    title: "My Listings",
+    active: "Active",
+    archived: "Archived",
+    searchPlaceholder: "Search your listings...",
+    noActive: "You don't have any active listings",
+    createFirst: "Create Your First Listing",
+    noArchived: "You don't have any archived listings",
+    views: "views",
+    viewDetails: "View Details",
+    edit: "Edit",
+    archive: "Archive",
+    delete: "Delete",
+    archivedOn: "Archived on",
+    renewFor7Days: "Renew for 7 Days",
+    deletePermanently: "Delete Permanently",
+    archiveTitle: "Archive Listing?",
+    archiveMessage: "This listing will be moved to your archived listings. You can renew it later.",
+    deleteTitle: "Delete Listing?",
+    deleteMessage: "This action cannot be undone. The listing will be permanently deleted.",
+    day: "day",
+    days: "days",
+    hour: "hour",
+    hours: "hours",
+    remaining: "remaining",
+    expiringSoon: "Expiring soon",
+  },
+
   // Offers
   offers: {
     title: "Offers",

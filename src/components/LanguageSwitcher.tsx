@@ -25,9 +25,9 @@ export default function LanguageSwitcher() {
   }, [isOpen]);
 
   const languages = [
-    { code: 'en', label: 'English', flag: 'EN' },
-    { code: 'uk', label: 'Українська', flag: 'UA' },
-    { code: 'es', label: 'Español', flag: 'ES' },
+    { code: 'en', name: 'English' },
+    { code: 'uk', name: 'Українська' },
+    { code: 'es', name: 'Español' },
   ];
 
   const currentLanguage = languages.find(lang => lang.code === language);
@@ -38,34 +38,33 @@ export default function LanguageSwitcher() {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative inline-block" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
-        title="Select language"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
       >
         <Globe className="w-5 h-5 text-gray-600" />
-        <span className="text-sm font-medium text-gray-700">
-          {currentLanguage?.flag}
+        <span className="text-sm text-gray-700">
+          {currentLanguage?.name}
         </span>
-        <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute top-full right-0 mt-1 min-w-full bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
           {languages.map((lang) => (
             <button
               key={lang.code}
               onClick={() => handleLanguageSelect(lang.code)}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                language === lang.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+              className={`w-full px-4 py-2.5 text-sm text-left transition-colors whitespace-nowrap ${
+                language === lang.code 
+                  ? 'bg-blue-50 text-blue-600' 
+                  : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <span className="text-sm font-medium w-8">{lang.flag}</span>
-              <span className="text-sm">{lang.label}</span>
+              {lang.name}
               {language === lang.code && (
-                <span className="ml-auto text-blue-600">✓</span>
+                <span className="ml-2">✓</span>
               )}
             </button>
           ))}

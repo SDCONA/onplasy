@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, X, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import SearchableSelect from '../components/SearchableSelect';
 import { processImage, formatBytes, getSizeReduction } from '../utils/imageProcessing';
 import { useTranslation, nameToSlug } from '../translations';
+import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 interface CreateListingPageProps {
   user: any;
@@ -25,6 +26,9 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showReorderModal, setShowReorderModal] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   
   // Common fields for all listings
   const [listingZipCode, setListingZipCode] = useState('');
@@ -84,6 +88,52 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
 
   const handleRemoveImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const newImages = [...images];
+    const draggedImage = newImages[draggedIndex];
+    
+    // Remove from old position
+    newImages.splice(draggedIndex, 1);
+    // Insert at new position
+    newImages.splice(dropIndex, 0, draggedImage);
+    
+    setImages(newImages);
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
+  const moveImageUp = (index: number) => {
+    if (index === 0) return;
+    const newImages = [...images];
+    [newImages[index - 1], newImages[index]] = [newImages[index], newImages[index - 1]];
+    setImages(newImages);
+  };
+
+  const moveImageDown = (index: number) => {
+    if (index === images.length - 1) return;
+    const newImages = [...images];
+    [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
+    setImages(newImages);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,6 +198,12 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (images.length === 0) {
+      setError('Please upload at least one image');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -216,12 +272,6 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h1 className="mb-6">{t.createListing.title}</h1>
-
-          {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded mb-4">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
@@ -512,61 +562,95 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
             )}
 
             <div className="mb-6">
-              <label className="block text-gray-700 mb-2">Images (up to 10)</label>
+              <label className="block text-gray-700 mb-2">
+                Images (up to 10) <span className="text-red-500">*</span>
+              </label>
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 onChange={handleFileUpload}
                 disabled={uploadingImage || images.length >= 10}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 disabled:opacity-50 ${
+                  error && images.length === 0
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
               />
               {uploadingImage && (
                 <p className="text-blue-600 mt-2">Uploading images...</p>
               )}
+              {error && images.length === 0 && (
+                <p className="text-red-500 text-sm mt-1">At least one image is required</p>
+              )}
 
               {(images.length > 0 || uploadingImage) && (
-                <div className="grid grid-cols-4 gap-2 mt-3">
-                  {/* Show skeleton loaders while uploading */}
-                  {uploadingImage && (
-                    <>
-                      {[...Array(Math.min(4, 10 - images.length))].map((_, index) => (
-                        <div 
-                          key={`skeleton-${index}`} 
-                          className="relative aspect-square bg-gray-200 rounded-lg overflow-hidden animate-pulse"
-                        >
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                <>
+                  <div className="grid grid-cols-4 gap-2 mt-3">
+                    {/* Show skeleton loaders while uploading */}
+                    {uploadingImage && (
+                      <>
+                        {[...Array(Math.min(4, 10 - images.length))].map((_, index) => (
+                          <div 
+                            key={`skeleton-${index}`} 
+                            className="relative aspect-square bg-gray-200 rounded-lg overflow-hidden animate-pulse"
+                          >
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                  
-                  {/* Show uploaded images */}
-                  {images.slice(0, 4).map((img, index) => (
-                    <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                      <img 
-                        src={img} 
-                        alt={`Preview ${index + 1}`} 
-                        className="w-full h-full object-contain" 
-                      />
-                      {/* Show overlay on 4th image if there are more images */}
-                      {index === 3 && images.length > 4 && (
-                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-                          <p className="text-white text-opacity-90">+{images.length - 4}</p>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                        ))}
+                      </>
+                    )}
+                    
+                    {/* Show all uploaded images */}
+                    {images.slice(0, 4).map((img, index) => (
+                      <div 
+                        key={index} 
+                        onClick={() => {
+                          setSelectedImageIndex(index);
+                          setShowReorderModal(true);
+                        }}
+                        className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer transition-all hover:opacity-80"
                       >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                        <img 
+                          src={img} 
+                          alt={`Preview ${index + 1}`} 
+                          className="w-full h-full object-contain pointer-events-none" 
+                        />
+                        {/* Show overlay on 4th image if there are more images */}
+                        {index === 3 && images.length > 4 && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-white/50">
+                            <p className="text-gray-900 text-lg font-medium">+{images.length - 4}</p>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage(index);
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 z-10"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Reorder Button */}
+                  {images.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowReorderModal(true)}
+                      className="mt-3 w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                      <ChevronDown className="w-4 h-4" />
+                      <span>Reorder Images</span>
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -575,6 +659,12 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
                 Your listing will be active for 7 days. After that, it will be archived and you can renew it from your listings page.
               </p>
             </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                {error}
+              </div>
+            )}
 
             <button
               type="submit"
@@ -586,6 +676,100 @@ export default function CreateListingPage({ user }: CreateListingPageProps) {
           </form>
         </div>
       </main>
+
+      {/* Reorder Modal */}
+      {showReorderModal && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          {/* Header with close button */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center">
+                {selectedImageIndex + 1}
+              </div>
+              <span className="text-gray-700 text-sm">
+                {selectedImageIndex === 0 ? 'Main Image' : `Image ${selectedImageIndex + 1} of ${images.length}`}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowReorderModal(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg text-gray-700"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Main Image Viewer */}
+          <div className="flex-1 overflow-auto relative flex items-center justify-center p-4 bg-gray-50">
+            <ImageWithFallback
+              src={images[selectedImageIndex]}
+              alt={`Image ${selectedImageIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+
+          {/* Thumbnail Navigation & Actions */}
+          <div className="p-4 border-t border-gray-200 bg-white">
+            {/* Action Buttons */}
+            <div className="flex gap-2 justify-center mb-4">
+              {selectedImageIndex !== 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newImages = [...images];
+                    const [movedImage] = newImages.splice(selectedImageIndex, 1);
+                    newImages.unshift(movedImage);
+                    setImages(newImages);
+                    setSelectedImageIndex(0);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Star className="w-4 h-4" />
+                  <span>Make First</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleRemoveImage(selectedImageIndex);
+                  if (selectedImageIndex >= images.length - 1) {
+                    setSelectedImageIndex(Math.max(0, images.length - 2));
+                  }
+                  if (images.length === 1) {
+                    setShowReorderModal(false);
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                <span>Delete</span>
+              </button>
+            </div>
+
+            {/* Thumbnail strip */}
+            {images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 justify-center">
+                {images.map((image, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`flex-shrink-0 w-16 h-16 bg-gray-200 rounded-lg overflow-hidden relative ${
+                      selectedImageIndex === index ? 'ring-2 ring-blue-500' : ''
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

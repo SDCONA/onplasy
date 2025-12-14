@@ -95,7 +95,8 @@ export async function getOptimizedListings(params: {
         *,
         profiles!listings_user_id_fkey(id, name, avatar_url, rating_count, rating_average, created_at),
         categories(id, name, slug),
-        subcategories(id, name, slug)
+        subcategories(id, name, slug),
+        real_estate_details(*)
       `, { count: 'exact' })
       .eq('status', status)
       .not('latitude', 'is', null)
@@ -240,7 +241,8 @@ export async function getOptimizedListings(params: {
       *,
       profiles!listings_user_id_fkey(id, name, avatar_url, rating_count, rating_average, created_at),
       categories(id, name, slug),
-      subcategories(id, name, slug)
+      subcategories(id, name, slug),
+      real_estate_details(*)
     `, { count: 'exact' });
   
   if (status) {

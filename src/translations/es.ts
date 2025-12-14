@@ -481,6 +481,37 @@ export const es = {
     removed: "Eliminado de favoritos",
   },
 
+  // My Listings
+  myListings: {
+    back: "Atrás",
+    newListing: "Nuevo Anuncio",
+    title: "Mis Anuncios",
+    active: "Activos",
+    archived: "Archivados",
+    searchPlaceholder: "Buscar tus anuncios...",
+    noActive: "No tienes anuncios activos",
+    createFirst: "Crear Tu Primer Anuncio",
+    noArchived: "No tienes anuncios archivados",
+    views: "vistas",
+    viewDetails: "Ver Detalles",
+    edit: "Editar",
+    archive: "Archivar",
+    delete: "Eliminar",
+    archivedOn: "Archivado el",
+    renewFor7Days: "Renovar por 7 Días",
+    deletePermanently: "Eliminar Permanentemente",
+    archiveTitle: "¿Archivar Anuncio?",
+    archiveMessage: "Este anuncio se moverá a tus anuncios archivados. Puedes renovarlo más tarde.",
+    deleteTitle: "¿Eliminar Anuncio?",
+    deleteMessage: "Esta acción no se puede deshacer. El anuncio será eliminado permanentemente.",
+    day: "día",
+    days: "días",
+    hour: "hora",
+    hours: "horas",
+    remaining: "restante",
+    expiringSoon: "Expirando pronto",
+  },
+
   // Offers
   offers: {
     title: "Ofertas",

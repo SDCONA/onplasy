@@ -483,6 +483,37 @@ export const uk: Translations = {
     removed: "Видалено з обраного",
   },
 
+  // My Listings
+  myListings: {
+    back: "Назад",
+    newListing: "Нове Оголошення",
+    title: "Мої Оголошення",
+    active: "Активні",
+    archived: "Архівовані",
+    searchPlaceholder: "Шукати ваші оголошення...",
+    noActive: "У вас немає активних оголошень",
+    createFirst: "Створити Перше Оголошення",
+    noArchived: "У вас немає архівованих оголошень",
+    views: "переглядів",
+    viewDetails: "Переглянути Деталі",
+    edit: "Редагувати",
+    archive: "Архівувати",
+    delete: "Видалити",
+    archivedOn: "Архівовано",
+    renewFor7Days: "Оновити на 7 Днів",
+    deletePermanently: "Видалити Назавжди",
+    archiveTitle: "Архівувати Оголошення?",
+    archiveMessage: "Це оголошення буде переміщено до ваших архівованих оголошень. Ви зможете оновити його пізніше.",
+    deleteTitle: "Видалити Оголошення?",
+    deleteMessage: "Цю дію не можна скасувати. Оголошення буде видалено назавжди.",
+    day: "день",
+    days: "днів",
+    hour: "година",
+    hours: "годин",
+    remaining: "залишилось",
+    expiringSoon: "Закінчується скоро",
+  },
+
   // Offers
   offers: {
     title: "Пропозиції",

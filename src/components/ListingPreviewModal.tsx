@@ -440,7 +440,43 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
                           <p>{listing.real_estate_details.square_feet.toLocaleString()}</p>
                         </div>
                       )}
+                      {listing.real_estate_details.lot_size && (
+                        <div>
+                          <p className="text-gray-500">Lot Size</p>
+                          <p>{listing.real_estate_details.lot_size.toLocaleString()} sq ft</p>
+                        </div>
+                      )}
+                      {listing.real_estate_details.year_built && (
+                        <div>
+                          <p className="text-gray-500">Year Built</p>
+                          <p>{listing.real_estate_details.year_built}</p>
+                        </div>
+                      )}
+                      {listing.real_estate_details.parking_spaces && (
+                        <div>
+                          <p className="text-gray-500">Parking Spaces</p>
+                          <p>{listing.real_estate_details.parking_spaces}</p>
+                        </div>
+                      )}
                     </div>
+                    
+                    {/* Amenities */}
+                    {listing.real_estate_details.amenities && listing.real_estate_details.amenities.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-gray-500 text-sm mb-2">Amenities</p>
+                        <div className="flex flex-wrap gap-2">
+                          {listing.real_estate_details.amenities.map((amenity: string, index: number) => (
+                            <span
+                              key={index}
+                              className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs"
+                            >
+                              {amenity}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="mt-3">
                       <p className="text-gray-500 text-sm">Address</p>
                       <p className="text-sm">{listing.real_estate_details.address}</p>

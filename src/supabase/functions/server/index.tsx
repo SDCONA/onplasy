@@ -437,17 +437,15 @@ app.get('/make-server-5dec7914/listings/:id', async (c) => {
       return c.json({ error: error.message }, 400);
     }
     
-    // Check if it's a real estate listing and fetch additional details
-    if (data.categories?.slug === 'real-estate') {
-      const { data: reDetails } = await supabase
-        .from('real_estate_details')
-        .select('*')
-        .eq('listing_id', id)
-        .single();
-      
-      if (reDetails) {
-        data.real_estate_details = reDetails;
-      }
+    // Always attempt to fetch real estate details if they exist for this listing
+    const { data: reDetails } = await supabase
+      .from('real_estate_details')
+      .select('*')
+      .eq('listing_id', id)
+      .maybeSingle(); // Use maybeSingle() to avoid error if no details exist
+    
+    if (reDetails) {
+      data.real_estate_details = reDetails;
     }
     
     // Increment views
@@ -470,6 +468,11 @@ app.post('/make-server-5dec7914/listings', async (c) => {
     
     const body = await c.req.json();
     const { title, description, price, category_id, subcategory_id, images, zip_code, property_type, listing_type, bedrooms, bathrooms, square_feet, lot_size, year_built, parking_spaces, address, city, state, amenities } = body;
+    
+    // Validate required fields
+    if (!images || images.length === 0) {
+      return c.json({ error: 'At least one image is required' }, 400);
+    }
     
     const { data, error } = await supabase
       .from('listings')
@@ -549,6 +552,11 @@ app.put('/make-server-5dec7914/listings/:id', async (c) => {
       lot_size, year_built, parking_spaces, address, city, state, 
       zip_code, amenities 
     } = body;
+    
+    // Validate required fields
+    if (!images || images.length === 0) {
+      return c.json({ error: 'At least one image is required' }, 400);
+    }
     
     // Update main listing
     const { data, error } = await supabase
@@ -731,7 +739,8 @@ app.get('/make-server-5dec7914/saved-listings', async (c) => {
           *,
           profiles!listings_user_id_fkey(id, name, avatar_url, rating_average),
           categories(id, name, slug),
-          subcategories(id, name, slug)
+          subcategories(id, name, slug),
+          real_estate_details(*)
         )
       `)
       .eq('user_id', user.id)
@@ -1397,7 +1406,8 @@ app.get('/make-server-5dec7914/admin/listings', async (c) => {
         *,
         profiles!listings_user_id_fkey(id, name, avatar_url, email),
         categories(id, name, slug),
-        subcategories(id, name, slug)
+        subcategories(id, name, slug),
+        real_estate_details(*)
       `);
     
     // Apply filters
