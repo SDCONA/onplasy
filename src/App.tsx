@@ -36,7 +36,6 @@ export default function App() {
     // Set a timeout to force loading to complete after 5 seconds
     const timeout = setTimeout(() => {
       if (mounted) {
-        console.log('Loading timeout reached, forcing load complete');
         setLoading(false);
       }
     }, 5000);

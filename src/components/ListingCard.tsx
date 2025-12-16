@@ -123,7 +123,6 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
         });
       } catch (error) {
         // User cancelled or share failed
-        console.log('Share cancelled or failed');
       }
     } else {
       // Fallback: copy to clipboard
@@ -146,12 +145,9 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
   const getImageUrl = (listing: any) => {
     if (listing.images && listing.images.length > 0) {
       const firstImage = listing.images[0];
-      console.log('[ListingCard] Image data:', { listingId: listing.id, images: listing.images, firstImage });
       // Simply return the first image URL
-      console.log('[ListingCard] Using URL:', firstImage);
       return firstImage;
     }
-    console.log('[ListingCard] No images found for listing:', listing.id);
     return null;
   };
 

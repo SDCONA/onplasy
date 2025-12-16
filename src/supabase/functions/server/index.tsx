@@ -19,7 +19,7 @@ const app = new Hono();
 // Environment-based logging (only logs in development)
 const isDev = Deno.env.get('ENVIRONMENT') === 'development';
 const debugLog = (...args: any[]) => {
-  if (isDev) console.log(...args);
+  // Removed debug logging
 };
 
 // Middleware
@@ -29,10 +29,7 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Enable request logging only in development
-if (isDev) {
-  app.use('*', logger(console.log));
-}
+// Removed development logger
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

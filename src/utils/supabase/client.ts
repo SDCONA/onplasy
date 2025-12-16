@@ -25,9 +25,6 @@ export const getSupabaseClient = () => {
     
     // Suppress error logs for invalid refresh tokens
     supabaseInstance.auth.onAuthStateChange((event, session) => {
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('Session refreshed successfully');
-      }
       // Don't log errors - let the app handle them gracefully
     });
   }

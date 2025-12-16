@@ -236,7 +236,7 @@ export default function ListingPreviewModal({ listingId, onClose, user }: Listin
           url: shareUrl
         });
       } catch (error) {
-        console.log('Share cancelled or failed');
+        // Share cancelled or failed
       }
     } else {
       try {
