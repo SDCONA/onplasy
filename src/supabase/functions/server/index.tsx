@@ -1849,9 +1849,11 @@ app.get('/make-server-5dec7914/profile/:id', async (c) => {
   try {
     const id = c.req.param('id');
     
+    // SECURITY: Only return safe public fields to prevent data exposure
+    // Sensitive fields (email, phone, city, zipcode, is_admin) are excluded
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, avatar_url, bio, rating_average, rating_count, created_at')
       .eq('id', id)
       .single();
     
