@@ -172,8 +172,10 @@ export default function ListingCard({ listing, user, onUpdate, initialSaved = fa
   return (
     <div className="group w-full">
       <div 
-        className={`bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer w-full ${
-          viewMode === 'list' ? 'flex' : ''
+        className={`bg-white rounded-xl overflow-hidden transition-all duration-300 cursor-pointer w-full ${
+          viewMode === 'list' 
+            ? 'flex shadow-sm hover:shadow-md' 
+            : 'shadow-md hover:shadow-xl hover:-translate-y-1'
         }`}
         onClick={() => setShowPreview(true)}
       >

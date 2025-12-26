@@ -21,6 +21,7 @@ export const uk: Translations = {
     close: "Закрити",
     view: "Переглянути",
     send: "Відправити",
+    active: "Активні",
   },
 
   // Header
@@ -51,6 +52,9 @@ export const uk: Translations = {
     signup: "Реєстрація",
     loginSignup: "Увійти / Реєстрація",
     toCreate: "щоб створити оголошення",
+    postListing: "Додати оголошення",
+    advancedFilters: "Розширені Фільтри",
+    clearAll: "Очистити Все",
     sortBy: "Сортувати за",
     searchByLocation: "Пошук за Місцем",
     zipcode: "Поштовий Індекс",
@@ -58,12 +62,15 @@ export const uk: Translations = {
     distance: "Відстань",
     miles: "миль",
     mile: "миля",
+    withinMile: "В межах 1 милі",
+    withinMiles: "В межах {count} миль",
     clear: "Очистити",
     priceRange: "Діапазон Цін",
     minPrice: "Мін",
     maxPrice: "Макс",
     condition: "Стан",
     new: "Новий",
+    used: "Вживаний",
     likeNew: "Як новий",
     good: "Хороший",
     fair: "Задовільний",
@@ -79,6 +86,7 @@ export const uk: Translations = {
     listingFound: "оголошення знайдено",
     listingsFound: "оголошень знайдено",
     noListingsFound: "Оголошень не знайдено",
+    heroSubtitle: "Ваш місцевий маркетплейс для автомобілів, нерухомості, одягу та іншого",
   },
 
   // Categories

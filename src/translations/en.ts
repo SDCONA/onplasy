@@ -19,6 +19,7 @@ export const en = {
     close: "Close",
     view: "View",
     send: "Send",
+    active: "Active",
   },
 
   // Header
@@ -49,6 +50,9 @@ export const en = {
     signup: "Sign Up",
     loginSignup: "Login / Sign Up",
     toCreate: "to create a listing",
+    postListing: "Post Listing",
+    advancedFilters: "Advanced Filters",
+    clearAll: "Clear All",
     sortBy: "Sort By",
     searchByLocation: "Search by Location",
     zipcode: "Zipcode",
@@ -56,12 +60,15 @@ export const en = {
     distance: "Distance",
     miles: "miles",
     mile: "mile",
+    withinMile: "Within 1 mile",
+    withinMiles: "Within {count} miles",
     clear: "Clear",
     priceRange: "Price Range",
     minPrice: "Min",
     maxPrice: "Max",
     condition: "Condition",
     new: "New",
+    used: "Used",
     likeNew: "Like New",
     good: "Good",
     fair: "Fair",
@@ -77,6 +84,7 @@ export const en = {
     listingFound: "listing found",
     listingsFound: "listings found",
     noListingsFound: "No listings found",
+    heroSubtitle: "Your local marketplace for cars, real estate, apparel, and more",
   },
 
   // Categories

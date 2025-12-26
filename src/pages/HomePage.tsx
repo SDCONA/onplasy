@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Filter, X, ChevronDown, ChevronUp, MapPin, Search, SlidersHorizontal, Plus } from 'lucide-react';
+import { Filter, X, ChevronDown, ChevronUp, MapPin, Search, SlidersHorizontal, Plus, Package } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import ListingCard from '../components/ListingCard';
@@ -268,214 +268,84 @@ export default function HomePage({ user }: HomePageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Search Bar */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder={t.header.searchPlaceholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      {/* Hero Section with Subtle Gradient */}
+      <div className="relative bg-gradient-to-br from-purple-50 via-violet-50 to-fuchsia-50 border-b border-purple-100 overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-violet-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-x-1/2 translate-y-1/2"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center mb-8">
+                      <p className="text-gray-600 max-w-2xl mx-auto mb-8 -mt-1">
+              {t.home.heroSubtitle || "Your local marketplace for cars, real estate, apparel, and more"}
+            </p>
           </div>
 
-          {/* Filter Toggle Button */}
-          <div className="mt-3 flex gap-2 justify-between">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <span>Filters</span>
-            </button>
-            
-            <div className="flex gap-2 ml-auto">
-              {!user && (
-                <button
-                  onClick={() => navigate('/auth')}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <span>{t.home.loginSignup}</span>
-                </button>
-              )}
+          {/* Search Bar */}
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-600 w-5 h-5" />
+              <input
+                type="text"
+                placeholder={t.header.searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-white border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 shadow-sm"
+              />
+            </div>
+
+            {/* Filter Toggle Button */}
+            <div className="mt-5 flex gap-3 justify-between">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-3 py-3 bg-white border-2 border-purple-200 text-purple-700 rounded-xl hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 shadow-sm whitespace-nowrap"
+              >
+                <span>{t.common.filter}</span>
+                {hasActiveFilters && (
+                  <span className="ml-1 px-2.5 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{t.common.active}</span>
+                )}
+              </button>
               
-              {user && (
-                <>
+              <div className="flex gap-3 ml-auto">
+                {!user && (
                   <button
-                    onClick={() => navigate('/my-listings')}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    onClick={() => navigate('/auth')}
+                    className="flex items-center gap-2 px-3 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm whitespace-nowrap"
                   >
-                    <span>{t.header.myListings}</span>
+                    <span>{t.home.loginSignup}</span>
                   </button>
-                  <button
-                    onClick={() => navigate('/create-listing')}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <span>{t.header.createListing}</span>
-                  </button>
-                </>
-              )}
+                )}
+                {user && (
+                  <>
+                    <button
+                      onClick={() => navigate('/my-listings')}
+                      className="flex items-center gap-2 px-3 py-3 bg-white border-2 border-purple-200 text-purple-700 rounded-xl hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 shadow-sm whitespace-nowrap"
+                    >
+                      <span>{t.header.myListings}</span>
+                    </button>
+                    <button
+                      onClick={() => navigate('/create-listing')}
+                      className="flex items-center gap-2 px-3 py-3 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 transition-all duration-200 shadow-md hover:shadow-lg whitespace-nowrap"
+                    >
+                      <span>{t.home.postListing}</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-
-          {/* Collapsible Filters */}
-          {showFilters && (
-            <div className="mt-4 space-y-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-              {/* Clear All Filters Button */}
-              {hasActiveFilters && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={clearAllFilters}
-                    className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm"
-                  >
-                    <span>Clear All Filters</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Sort By */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">{t.home.sortBy}</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="random">{t.sorting.random}</option>
-                  <option value="newest">{t.sorting.newest}</option>
-                  <option value="oldest">{t.sorting.oldest}</option>
-                  <option value="price_low">{t.sorting.priceAsc}</option>
-                  <option value="price_high">{t.sorting.priceDesc}</option>
-                </select>
-              </div>
-
-              {/* Location Search - Zipcode & Distance */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <MapPin className="w-5 h-5 text-blue-600" />
-                  <span className="text-gray-700">{t.home.searchByLocation}</span>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {/* Zipcode Input */}
-                  <div className="flex-1">
-                    <label className="block text-sm text-gray-600 mb-1">
-                      {t.home.zipcode}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={t.home.enterZipcode}
-                      value={zipcode}
-                      onChange={(e) => setZipcode(e.target.value.replace(/[^0-9]/g, '').slice(0, 5))}
-                      maxLength={5}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* Distance Slider */}
-                  <div className="flex-1">
-                    <label className="block text-sm text-gray-600 mb-1">
-                      {t.home.distance}: {distance} {distance !== 1 ? t.home.miles : t.home.mile}
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min="1"
-                        max="500"
-                        step="1"
-                        value={distance}
-                        onChange={(e) => setDistance(parseInt(e.target.value))}
-                        className="flex-1 h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0"
-                        disabled={!zipcode}
-                      />
-                      <span className="text-sm text-gray-500 w-16 text-right">{distance}mi</span>
-                    </div>
-                  </div>
-
-                  {/* Clear Button */}
-                  {zipcode && (
-                    <div className="flex items-end">
-                      <button
-                        onClick={() => {
-                          setZipcode('');
-                          setDistance(50);
-                        }}
-                        className="px-4 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg whitespace-nowrap"
-                      >
-                        {t.home.clear}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">{t.home.priceRange}</label>
-                <div className="flex gap-4">
-                  <input
-                    type="text"
-                    placeholder={t.home.minPrice}
-                    value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder={t.home.maxPrice}
-                    value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Condition */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">{t.home.condition}</label>
-                <select
-                  value={condition}
-                  onChange={(e) => setCondition(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="all">{t.home.all}</option>
-                  <option value="new">{t.home.new}</option>
-                  <option value="like-new">{t.home.likeNew}</option>
-                  <option value="good">{t.home.good}</option>
-                  <option value="fair">{t.home.fair}</option>
-                  <option value="poor">{t.home.poor}</option>
-                </select>
-              </div>
-
-              {/* Date Posted */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">{t.home.datePosted}</label>
-                <select
-                  value={datePosted}
-                  onChange={(e) => setDatePosted(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="all">{t.home.allTime}</option>
-                  <option value="24h">{t.home.last24Hours}</option>
-                  <option value="week">{t.home.last7Days}</option>
-                  <option value="month">{t.home.last30Days}</option>
-                </select>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Categories */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-400">
             <button
               onClick={() => handleCategoryChange('all')}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+              className={`px-5 py-2.5 rounded-lg whitespace-nowrap font-medium transition-all duration-200 ${
                 selectedCategory === 'all'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -501,9 +371,9 @@ export default function HomePage({ user }: HomePageProps) {
                 <button
                   key={category.id}
                   onClick={() => handleCategoryChange(category.slug)}
-                  className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+                  className={`px-5 py-2.5 rounded-lg whitespace-nowrap font-medium transition-all duration-200 ${
                     selectedCategory === category.slug
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -517,15 +387,15 @@ export default function HomePage({ user }: HomePageProps) {
 
       {/* Subcategories */}
       {showSubcategories && (
-        <div className="bg-blue-50 border-b border-blue-100">
+        <div className="bg-purple-50 border-b border-purple-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-blue-100 [&::-webkit-scrollbar-thumb]:bg-blue-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-blue-400">
+            <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-purple-100 [&::-webkit-scrollbar-thumb]:bg-purple-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-purple-400">
               <button
                 onClick={() => setSelectedSubcategory('all')}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap text-sm ${
+                className={`px-4 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-all duration-200 ${
                   selectedSubcategory === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-blue-100'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'bg-white text-gray-700 hover:bg-purple-100 border border-purple-200'
                 }`}
               >
                 {t.home.allCategories} {getCategoryName(selectedCategoryObj?.slug || '')}
@@ -534,10 +404,10 @@ export default function HomePage({ user }: HomePageProps) {
                 <button
                   key={subcategory.id}
                   onClick={() => setSelectedSubcategory(subcategory.slug)}
-                  className={`px-3 py-1.5 rounded-lg whitespace-nowrap text-sm ${
+                  className={`px-4 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-all duration-200 ${
                     selectedSubcategory === subcategory.slug
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-blue-100'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'bg-white text-gray-700 hover:bg-purple-100 border border-purple-200'
                   }`}
                 >
                   {getCategoryName(subcategory.slug)}
@@ -550,41 +420,155 @@ export default function HomePage({ user }: HomePageProps) {
 
       {/* Real Estate Buy/Rent Filter */}
       {isRealEstate && (
-        <div className="bg-green-50 border-b border-green-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div className="bg-teal-50 border-b border-teal-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center gap-3">
-              <span className="text-gray-700">{t.home.lookingTo}</span>
+              <span className="text-gray-700 font-medium">{t.home.lookingTo}</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setListingType('all')}
-                  className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+                  className={`px-5 py-2.5 rounded-lg whitespace-nowrap font-medium transition-all duration-200 ${
                     listingType === 'all'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-green-100'
+                      ? 'bg-teal-600 text-white shadow-sm'
+                      : 'bg-white text-gray-700 hover:bg-teal-100 border border-teal-200'
                   }`}
                 >
                   {t.home.all}
                 </button>
                 <button
                   onClick={() => setListingType('sale')}
-                  className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+                  className={`px-5 py-2.5 rounded-lg whitespace-nowrap font-medium transition-all duration-200 ${
                     listingType === 'sale'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-green-100'
+                      ? 'bg-teal-600 text-white shadow-sm'
+                      : 'bg-white text-gray-700 hover:bg-teal-100 border border-teal-200'
                   }`}
                 >
                   {t.home.buy}
                 </button>
                 <button
                   onClick={() => setListingType('rent')}
-                  className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+                  className={`px-5 py-2.5 rounded-lg whitespace-nowrap font-medium transition-all duration-200 ${
                     listingType === 'rent'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-green-100'
+                      ? 'bg-teal-600 text-white shadow-sm'
+                      : 'bg-white text-gray-700 hover:bg-teal-100 border border-teal-200'
                   }`}
                 >
                   {t.home.rent}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Filters Panel */}
+      {showFilters && (
+        <div className="bg-white border-b border-gray-200 shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-semibold text-gray-900 text-lg">{t.home.advancedFilters}</h3>
+              <button
+                onClick={clearAllFilters}
+                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+              >
+                {t.home.clearAll}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Sort */}
+              <div>
+                <label className="block text-sm mb-2 text-gray-700 font-medium">{t.home.sortBy}</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="random">{t.sorting.random}</option>
+                  <option value="newest">{t.sorting.newest}</option>
+                  <option value="oldest">{t.sorting.oldest}</option>
+                  <option value="price-asc">{t.sorting.priceAsc}</option>
+                  <option value="price-desc">{t.sorting.priceDesc}</option>
+                </select>
+              </div>
+
+              {/* Condition */}
+              <div>
+                <label className="block text-sm mb-2 text-gray-700 font-medium">{t.home.condition}</label>
+                <select
+                  value={condition}
+                  onChange={(e) => setCondition(e.target.value)}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="all">{t.home.all}</option>
+                  <option value="new">{t.home.new}</option>
+                  <option value="used">{t.home.used}</option>
+                </select>
+              </div>
+
+              {/* Date Posted */}
+              <div>
+                <label className="block text-sm mb-2 text-gray-700 font-medium">{t.home.datePosted}</label>
+                <select
+                  value={datePosted}
+                  onChange={(e) => setDatePosted(e.target.value)}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="all">{t.home.allTime}</option>
+                  <option value="24h">{t.home.last24Hours}</option>
+                  <option value="7d">{t.home.last7Days}</option>
+                  <option value="30d">{t.home.last30Days}</option>
+                </select>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <label className="block text-sm mb-2 text-gray-700 font-medium">{t.home.priceRange}</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder={t.home.minPrice}
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    className="w-1/2 px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                  <input
+                    type="number"
+                    placeholder={t.home.maxPrice}
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    className="w-1/2 px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Zipcode & Distance - Full Width at Bottom */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm mb-2 text-gray-700 font-medium">{t.home.zipcode}</label>
+                <input
+                  type="text"
+                  placeholder={t.home.zipcode}
+                  value={zipcode}
+                  onChange={(e) => setZipcode(e.target.value)}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm text-gray-700 font-medium">{t.home.distance}</label>
+                  <span className="text-sm font-medium text-purple-700">{distance} {distance === 1 ? t.home.mile : t.home.miles}</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="500"
+                  value={distance}
+                  onChange={(e) => setDistance(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                />
               </div>
             </div>
           </div>

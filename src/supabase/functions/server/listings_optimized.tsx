@@ -99,6 +99,7 @@ export async function getOptimizedListings(params: {
         real_estate_details(*)
       `, { count: 'exact' })
       .eq('status', status)
+      .gt('expires_at', new Date().toISOString()) // Safety: exclude expired listings
       .not('latitude', 'is', null)
       .not('longitude', 'is', null);
     
@@ -134,19 +135,22 @@ export async function getOptimizedListings(params: {
       query = query.eq('user_id', userId);
     }
     
-    if (type && type !== 'all') {
-      query = query.eq('listing_type', type);
-    }
+    // Remove listing_type filter - this only exists in real_estate_details table
+    // if (type && type !== 'all') {
+    //   query = query.eq('listing_type', type);
+    // }
     
     if (location) {
       query = query.or(`title.ilike.%${location}%,description.ilike.%${location}%`);
     }
     
     if (minPrice !== undefined) {
+      console.log(`[PRICE FILTER] Applying minPrice filter: ${minPrice} (type: ${typeof minPrice})`);
       query = query.gte('price', minPrice);
     }
     
     if (maxPrice !== undefined) {
+      console.log(`[PRICE FILTER] Applying maxPrice filter: ${maxPrice} (type: ${typeof maxPrice})`);
       query = query.lte('price', maxPrice);
     }
     
@@ -163,10 +167,10 @@ export async function getOptimizedListings(params: {
         case '24h':
           dateThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
           break;
-        case 'week':
+        case '7d':
           dateThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           break;
-        case 'month':
+        case '30d':
           dateThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           break;
         default:
@@ -249,6 +253,11 @@ export async function getOptimizedListings(params: {
     query = query.eq('status', status);
   }
   
+  // Safety: exclude expired listings (cron job archives them hourly, but this catches any in-between)
+  if (status === 'active') {
+    query = query.gt('expires_at', new Date().toISOString());
+  }
+  
   if (category && category !== 'all') {
     const { data: categoryData } = await supabase
       .from('categories')
@@ -281,19 +290,22 @@ export async function getOptimizedListings(params: {
     query = query.eq('user_id', userId);
   }
   
-  if (type && type !== 'all') {
-    query = query.eq('listing_type', type);
-  }
+  // Remove listing_type filter - this only exists in real_estate_details table
+  // if (type && type !== 'all') {
+  //   query = query.eq('listing_type', type);
+  // }
   
   if (location) {
     query = query.or(`title.ilike.%${location}%,description.ilike.%${location}%`);
   }
   
   if (minPrice !== undefined) {
+    console.log(`[PRICE FILTER] Applying minPrice filter: ${minPrice} (type: ${typeof minPrice})`);
     query = query.gte('price', minPrice);
   }
   
   if (maxPrice !== undefined) {
+    console.log(`[PRICE FILTER] Applying maxPrice filter: ${maxPrice} (type: ${typeof maxPrice})`);
     query = query.lte('price', maxPrice);
   }
   
@@ -310,10 +322,10 @@ export async function getOptimizedListings(params: {
       case '24h':
         dateThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
-      case 'week':
+      case '7d':
         dateThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
-      case 'month':
+      case '30d':
         dateThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
       default:

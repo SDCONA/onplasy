@@ -19,6 +19,7 @@ export const es = {
     close: "Cerrar",
     view: "Ver",
     send: "Enviar",
+    active: "Activo",
   },
 
   // Header
@@ -49,6 +50,9 @@ export const es = {
     signup: "Registrarse",
     loginSignup: "Iniciar Sesión / Registrarse",
     toCreate: "para crear un anuncio",
+    postListing: "Publicar anuncio",
+    advancedFilters: "Filtros Avanzados",
+    clearAll: "Limpiar Todo",
     sortBy: "Ordenar Por",
     searchByLocation: "Buscar por Ubicación",
     zipcode: "Código Postal",
@@ -56,12 +60,15 @@ export const es = {
     distance: "Distancia",
     miles: "millas",
     mile: "milla",
+    withinMile: "Dentro de 1 milla",
+    withinMiles: "Dentro de {count} millas",
     clear: "Limpiar",
     priceRange: "Rango de Precio",
     minPrice: "Mín",
     maxPrice: "Máx",
     condition: "Condición",
     new: "Nuevo",
+    used: "Usado",
     likeNew: "Como Nuevo",
     good: "Bueno",
     fair: "Aceptable",
@@ -77,6 +84,7 @@ export const es = {
     listingFound: "anuncio encontrado",
     listingsFound: "anuncios encontrados",
     noListingsFound: "No se encontraron anuncios",
+    heroSubtitle: "Tu mercado local para autos, bienes raíces, ropa y más",
   },
 
   // Categories

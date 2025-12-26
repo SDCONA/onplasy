@@ -35,6 +35,41 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Security: Strip sensitive profile fields from responses
+function stripSensitiveProfileData(obj: any): any {
+  if (!obj) return obj;
+  
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => stripSensitiveProfileData(item));
+  }
+  
+  // Handle objects
+  if (typeof obj === 'object') {
+    const cleaned = { ...obj };
+    
+    // If this is a profile object, remove sensitive fields
+    if (cleaned.email !== undefined || cleaned.phone !== undefined) {
+      delete cleaned.email;
+      delete cleaned.phone;
+      delete cleaned.city;
+      delete cleaned.zipcode;
+      delete cleaned.is_admin;
+    }
+    
+    // Recursively clean nested objects
+    for (const key in cleaned) {
+      if (typeof cleaned[key] === 'object' && cleaned[key] !== null) {
+        cleaned[key] = stripSensitiveProfileData(cleaned[key]);
+      }
+    }
+    
+    return cleaned;
+  }
+  
+  return obj;
+}
+
 // Initialize storage bucket on startup
 const BUCKET_NAME = 'make-5dec7914-listings';
 
@@ -840,6 +875,33 @@ app.delete('/make-server-5dec7914/saved-listings/:listingId', async (c) => {
   } catch (error) {
     console.log('Unsave listing exception:', error);
     return c.json({ error: 'Failed to unsave listing' }, 500);
+  }
+});
+
+// Check if listing is saved
+app.get('/make-server-5dec7914/saved-listings/check/:listingId', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ isSaved: false });
+    
+    const listingId = c.req.param('listingId');
+    
+    const { data, error } = await supabase
+      .from('saved_listings')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('listing_id', listingId)
+      .maybeSingle();
+    
+    if (error) {
+      console.log('Check saved listing error:', error);
+      return c.json({ isSaved: false });
+    }
+    
+    return c.json({ isSaved: !!data });
+  } catch (error) {
+    console.log('Check saved listing exception:', error);
+    return c.json({ isSaved: false });
   }
 });
 
@@ -2336,7 +2398,8 @@ app.post('/make-server-5dec7914/offers', async (c) => {
     //   console.error('Email send error (non-fatal):', err)
     // );
     
-    return c.json({ offer });
+    // Strip sensitive data before returning
+    return c.json({ offer: stripSensitiveProfileData(offer) });
   } catch (error) {
     console.error('Create offer exception:', error);
     return c.json({ error: 'Failed to create offer' }, 500);
@@ -2511,7 +2574,7 @@ app.put('/make-server-5dec7914/offers/:id/accept', async (c) => {
       console.error('Email send error (non-fatal):', err)
     );
     
-    return c.json({ offer: updatedOffer });
+    return c.json({ offer: stripSensitiveProfileData(updatedOffer) });
   } catch (error) {
     console.error('Accept offer exception:', error);
     return c.json({ error: 'Failed to accept offer' }, 500);
@@ -2570,7 +2633,7 @@ app.put('/make-server-5dec7914/offers/:id/decline', async (c) => {
       );
     }
     
-    return c.json({ offer: updatedOffer });
+    return c.json({ offer: stripSensitiveProfileData(updatedOffer) });
   } catch (error) {
     console.error('Decline offer exception:', error);
     return c.json({ error: 'Failed to decline offer' }, 500);
@@ -2702,7 +2765,7 @@ app.put('/make-server-5dec7914/offers/:id/counter', async (c) => {
       console.error('Email send error (non-fatal):', err)
     );
     
-    return c.json({ offer: updatedOffer });
+    return c.json({ offer: stripSensitiveProfileData(updatedOffer) });
   } catch (error) {
     console.error('Counter offer exception:', error);
     return c.json({ error: 'Failed to counter offer' }, 500);
