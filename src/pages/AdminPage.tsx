@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Users, Package, AlertTriangle, MessageSquare, Star, TrendingUp, FileText, Shield, Database, Scale, Ban, CheckCircle, XCircle, Trash2, Eye, Mail, Calendar, MapPin, Search, Grid, List } from 'lucide-react';
+import { ArrowLeft, Users, Package, AlertTriangle, MessageSquare, Star, TrendingUp, FileText, Shield, Database, Scale, Ban, CheckCircle, XCircle, Trash2, Eye, Mail, Calendar, MapPin, Search, Grid, List, CheckSquare, Square, RefreshCw } from 'lucide-react';
 import { projectId } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { publicAnonKey } from '../utils/supabase/info';
@@ -31,6 +31,11 @@ export default function AdminPage({ user }: AdminPageProps) {
   const [userSearch, setUserSearch] = useState('');
   const [usersViewMode, setUsersViewMode] = useState<'list' | 'grid'>('list');
   const [listingsViewMode, setListingsViewMode] = useState<'list' | 'grid'>('list');
+  const [selectedListings, setSelectedListings] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
+  const [showBulkResultModal, setShowBulkResultModal] = useState(false);
+  const [bulkRenewalResult, setBulkRenewalResult] = useState<{ success: number; failed: number } | null>(null);
   
   // Pagination states
   const [reportsPage, setReportsPage] = useState(1);
@@ -59,6 +64,7 @@ export default function AdminPage({ user }: AdminPageProps) {
 
   useEffect(() => {
     setListingsPage(1);
+    setSelectedListings([]); // Clear selections when filter changes
   }, [listingFilter, listingSort, listingSearch]);
 
   useEffect(() => {
@@ -232,6 +238,82 @@ export default function AdminPage({ user }: AdminPageProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectAllListings = () => {
+    if (selectedListings.length === listings.length) {
+      // Deselect all
+      setSelectedListings([]);
+    } else {
+      // Select all current page listings
+      setSelectedListings(listings.map(l => l.id));
+    }
+  };
+
+  const handleToggleListingSelection = (listingId: string) => {
+    setSelectedListings(prev => {
+      if (prev.includes(listingId)) {
+        return prev.filter(id => id !== listingId);
+      } else {
+        return [...prev, listingId];
+      }
+    });
+  };
+
+  const showBulkRenewConfirm = () => {
+    if (selectedListings.length === 0) {
+      return;
+    }
+    setShowBulkConfirmModal(true);
+  };
+
+  const handleBulkRenewListings = async () => {
+    setShowBulkConfirmModal(false);
+    setBulkActionLoading(true);
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setBulkActionLoading(false);
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const listingId of selectedListings) {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/admin/listings/${listingId}/renew`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.ok) {
+          successCount++;
+        } else {
+          failCount++;
+          console.error(`Failed to renew listing ${listingId}`);
+        }
+      } catch (error) {
+        failCount++;
+        console.error(`Error renewing listing ${listingId}:`, error);
+      }
+    }
+
+    setBulkActionLoading(false);
+    setSelectedListings([]);
+    
+    // Show result modal
+    setBulkRenewalResult({ success: successCount, failed: failCount });
+    setShowBulkResultModal(true);
+    
+    // Refresh listings
+    fetchListings();
   };
 
   const handleResolveReport = async (reportId: string, status: 'resolved' | 'dismissed', adminNotes: string, restoreListing: boolean = false) => {
@@ -790,6 +872,54 @@ export default function AdminPage({ user }: AdminPageProps) {
                   >
                     Disabled
                   </button>
+                  <button
+                    onClick={() => setListingFilter('archived')}
+                    className={`px-4 py-2 rounded-lg ${
+                      listingFilter === 'archived'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Archived
+                  </button>
+
+                  {/* Bulk Selection Controls - Only show for archived filter */}
+                  {listingFilter === 'archived' && listings.length > 0 && (
+                    <>
+                      <div className="w-px bg-gray-300 mx-2" />
+                      <button
+                        onClick={handleSelectAllListings}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                      >
+                        {selectedListings.length === listings.length ? (
+                          <CheckSquare className="w-5 h-5" />
+                        ) : (
+                          <Square className="w-5 h-5" />
+                        )}
+                        {selectedListings.length === listings.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                      
+                      {selectedListings.length > 0 && (
+                        <button
+                          onClick={showBulkRenewConfirm}
+                          disabled={bulkActionLoading}
+                          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {bulkActionLoading ? (
+                            <>
+                              <RefreshCw className="w-5 h-5 animate-spin" />
+                              Renewing {selectedListings.length}...
+                            </>
+                          ) : (
+                            <>
+                              <Calendar className="w-5 h-5" />
+                              Renew Selected ({selectedListings.length})
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -883,6 +1013,9 @@ export default function AdminPage({ user }: AdminPageProps) {
                       onShowPreview={setShowListingPreview}
                       onRefresh={fetchListings}
                       viewMode={listingsViewMode}
+                      showCheckbox={listingFilter === 'archived'}
+                      isSelected={selectedListings.includes(listing.id)}
+                      onToggleSelection={handleToggleListingSelection}
                     />
                   ))}
                 </div>
@@ -1042,6 +1175,149 @@ export default function AdminPage({ user }: AdminPageProps) {
           </div>
         )}
       </main>
+
+      {/* Bulk Renewal Confirmation Modal */}
+      {showBulkConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-600 to-violet-600 p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <Calendar className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl text-white">Renew Listings</h3>
+                  <p className="text-purple-100 text-sm">Bulk Action Confirmation</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-gray-700 mb-2">
+                You are about to renew <strong className="text-purple-600">{selectedListings.length} listing{selectedListings.length !== 1 ? 's' : ''}</strong>.
+              </p>
+              <p className="text-gray-600 text-sm">
+                All selected listings will be:
+              </p>
+              <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>Set to <strong>active</strong> status</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>Extended for another <strong>7 days</strong></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>Visible to all users</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={() => setShowBulkConfirmModal(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkRenewListings}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 transition-all shadow-lg shadow-purple-500/30"
+              >
+                Confirm Renewal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Renewal Result Modal */}
+      {showBulkResultModal && bulkRenewalResult && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className={`p-6 ${
+              bulkRenewalResult.failed === 0 
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600' 
+                : 'bg-gradient-to-r from-purple-600 to-violet-600'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  {bulkRenewalResult.failed === 0 ? (
+                    <CheckCircle className="w-6 h-6 text-white" />
+                  ) : (
+                    <AlertTriangle className="w-6 h-6 text-white" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-xl text-white">
+                    {bulkRenewalResult.failed === 0 ? 'Renewal Complete!' : 'Renewal Finished'}
+                  </h3>
+                  <p className="text-white/90 text-sm">Bulk action results</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* Success Count */}
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-green-900">Successfully Renewed</p>
+                      <p className="text-green-700 text-sm">Listings are now active</p>
+                    </div>
+                  </div>
+                  <div className="text-2xl text-green-600">
+                    {bulkRenewalResult.success}
+                  </div>
+                </div>
+
+                {/* Failed Count */}
+                {bulkRenewalResult.failed > 0 && (
+                  <div className="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <XCircle className="w-5 h-5 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="text-red-900">Failed to Renew</p>
+                        <p className="text-red-700 text-sm">Check console for details</p>
+                      </div>
+                    </div>
+                    <div className="text-2xl text-red-600">
+                      {bulkRenewalResult.failed}
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary */}
+                <div className="pt-4 border-t border-gray-200">
+                  <p className="text-gray-600 text-sm text-center">
+                    Total: {bulkRenewalResult.success + bulkRenewalResult.failed} listing{(bulkRenewalResult.success + bulkRenewalResult.failed) !== 1 ? 's' : ''} processed
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 pb-6">
+              <button
+                onClick={() => {
+                  setShowBulkResultModal(false);
+                  setBulkRenewalResult(null);
+                }}
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 transition-all shadow-lg shadow-purple-500/30"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1737,9 +2013,12 @@ interface ListingCardProps {
   onShowPreview: (show: boolean) => void;
   onRefresh?: () => void;
   viewMode?: 'list' | 'grid';
+  showCheckbox?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: string) => void;
 }
 
-function ListingCard({ listing, onPreview, onShowPreview, onRefresh, viewMode = 'list' }: ListingCardProps) {
+function ListingCard({ listing, onPreview, onShowPreview, onRefresh, viewMode = 'list', showCheckbox = false, isSelected = false, onToggleSelection }: ListingCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -1875,6 +2154,56 @@ function ListingCard({ listing, onPreview, onShowPreview, onRefresh, viewMode = 
     }
   };
 
+  const showRenewConfirm = () => {
+    setConfirmAction({
+      type: 'renew',
+      title: 'Renew Listing',
+      message: 'Are you sure you want to renew this listing? It will be set to active status and extended for another 7 days.',
+      onConfirm: executeRenewListing
+    });
+    setShowConfirmModal(true);
+  };
+
+  const executeRenewListing = async () => {
+    setShowConfirmModal(false);
+    setActionLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert('You must be logged in');
+        return;
+      }
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-5dec7914/admin/listings/${listing.id}/renew`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Renew listing error response:', errorText);
+        throw new Error(errorText);
+      }
+
+      const result = await response.json();
+      console.log('Renew listing success:', result);
+      onShowPreview(false);
+      onPreview(null);
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error('Failed to renew listing:', error);
+      alert(`Failed to renew listing: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const showBanConfirm = () => {
     setConfirmAction({
       type: 'ban',
@@ -1946,6 +2275,23 @@ function ListingCard({ listing, onPreview, onShowPreview, onRefresh, viewMode = 
               <Package className="w-12 h-12" />
             </div>
           )}
+          {showCheckbox && onToggleSelection && (
+            <div className="absolute top-2 left-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSelection(listing.id);
+                }}
+                className="p-1 bg-white rounded shadow-md hover:bg-gray-50"
+              >
+                {isSelected ? (
+                  <CheckSquare className="w-5 h-5 text-purple-600" />
+                ) : (
+                  <Square className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+            </div>
+          )}
           <div className="absolute top-2 right-2">
             <span className={`px-2 py-1 rounded text-xs ${
               listing.status === 'active' ? 'bg-green-600 text-white' : 
@@ -2002,6 +2348,17 @@ function ListingCard({ listing, onPreview, onShowPreview, onRefresh, viewMode = 
                 </button>
               )}
 
+              {listing.status === 'archived' && (
+                <button
+                  onClick={showRenewConfirm}
+                  disabled={actionLoading}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Renew
+                </button>
+              )}
+
               <button
                 onClick={showBanConfirm}
                 disabled={actionLoading}
@@ -2024,6 +2381,21 @@ function ListingCard({ listing, onPreview, onShowPreview, onRefresh, viewMode = 
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
+              {showCheckbox && onToggleSelection && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSelection(listing.id);
+                  }}
+                  className="p-1 hover:bg-gray-200 rounded"
+                >
+                  {isSelected ? (
+                    <CheckSquare className="w-5 h-5 text-purple-600" />
+                  ) : (
+                    <Square className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+              )}
               <Package className="w-5 h-5 text-blue-600" />
               <div className={`w-16 h-16 rounded-lg overflow-hidden border-2 ${listing.status === 'active' ? 'border-green-600' : 'border-blue-600'}`}>
                 {getImageUrl(listing) ? (
@@ -2187,6 +2559,17 @@ function ListingCard({ listing, onPreview, onShowPreview, onRefresh, viewMode = 
               </button>
             )}
 
+            {listing.status === 'archived' && (
+              <button
+                onClick={showRenewConfirm}
+                disabled={actionLoading}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Calendar className="w-5 h-5" />
+                Renew Listing
+              </button>
+            )}
+
             <button
               onClick={showBanConfirm}
               disabled={actionLoading}
@@ -2226,6 +2609,8 @@ function ListingCard({ listing, onPreview, onShowPreview, onRefresh, viewMode = 
                   className={`px-4 py-2 text-white rounded-lg ${
                     confirmAction.type === 'ban' || confirmAction.type === 'disable'
                       ? 'bg-red-600 hover:bg-red-700'
+                      : confirmAction.type === 'renew'
+                      ? 'bg-purple-600 hover:bg-purple-700'
                       : 'bg-green-600 hover:bg-green-700'
                   }`}
                 >

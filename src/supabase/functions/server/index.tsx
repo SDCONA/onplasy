@@ -1679,6 +1679,52 @@ app.post('/make-server-5dec7914/admin/listings/:id/enable', async (c) => {
   }
 });
 
+// Admin: Renew listing (archived -> active + extend 7 days)
+app.post('/make-server-5dec7914/admin/listings/:id/renew', async (c) => {
+  try {
+    const user = await getAuthUser(c.req.raw);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+    
+    if (!profile?.is_admin) {
+      return c.json({ error: 'Forbidden - Admin access required' }, 403);
+    }
+    
+    const listingId = c.req.param('id');
+    
+    // Calculate new expiration date (7 days from now)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    
+    // Update listing: set to active, extend expires_at, clear archived_at
+    const { error } = await supabase
+      .from('listings')
+      .update({ 
+        status: 'active',
+        expires_at: expiresAt.toISOString(),
+        archived_at: null
+      })
+      .eq('id', listingId);
+    
+    if (error) {
+      console.log('Renew listing error:', error);
+      return c.json({ error: error.message }, 400);
+    }
+    
+    return c.json({ message: 'Listing renewed successfully', expires_at: expiresAt.toISOString() });
+  } catch (error) {
+    console.log('Renew listing exception:', error);
+    console.log('Error details:', JSON.stringify(error));
+    return c.json({ error: 'Failed to renew listing', details: error instanceof Error ? error.message : String(error) }, 500);
+  }
+});
+
 // Admin: Update listing category
 app.put('/make-server-5dec7914/admin/listings/:id/category', async (c) => {
   try {
